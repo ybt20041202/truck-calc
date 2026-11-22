@@ -77,6 +77,19 @@ input[type=text]::placeholder{color:#94a3b8}
 .cmp .l2{font-size:11px;color:var(--muted);margin-top:2px}
 .best{flex:0 0 auto;background:#dcfce7;color:#166534;font-size:10px;font-weight:700;
   padding:3px 7px;border-radius:999px}
+textarea{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:15px;line-height:1.6;color:var(--ink);background:#fbfcfd;font-family:inherit;resize:vertical}
+textarea:focus{outline:none;border-color:#94a3b8;background:#fff}
+textarea::placeholder{color:#94a3b8}
+select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:14px;font-weight:600;color:var(--ink);background:#f8fafc;font-family:inherit;appearance:none}
+.take{flex:0 0 auto;border:0;background:var(--dark);color:#fff;font-family:inherit;font-size:12px;
+  font-weight:700;padding:8px 10px;border-radius:9px;line-height:1.2}
+.take:active{opacity:.85}
+.stale{opacity:.55}
+.oldmark{color:var(--amber)}
+.boardtop{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.boardtop select{grid-column:1/-1}
 .rowin{display:flex;gap:8px;align-items:stretch}
 .rowin input{flex:1;min-width:0}
 .mini{flex:0 0 auto;border:1px solid var(--line);background:#f1f5f9;color:var(--ink);
@@ -185,6 +198,31 @@ details.card .body{margin-top:12px}
     </div>
   </section>
 
+  <details class="card" id="boardCard" open>
+    <summary>多单比价</summary>
+    <div class="body">
+      <div class="tip" style="margin-bottom:8px">把平台上的单复制出来，<b>一行一单</b>贴进下面。认得出的写法：<br />
+        <span style="color:#334155">杭州萧山 → 广州白云 1141公里 5200元 等2小时 过路费580</span></div>
+      <textarea id="pasteBox" rows="3" placeholder="杭州萧山 → 广州白云 1141公里 5200元&#10;杭州 → 义乌 120公里 380元 等1小时"></textarea>
+      <div class="btnrow">
+        <button class="btn" id="addPaste">贴进来算</button>
+        <button class="btn ghost" id="addManual">加当前这单</button>
+      </div>
+      <div class="boardtop">
+        <select id="boardSort">
+          <option value="hourly">按时薪排（谁更值钱）</option>
+          <option value="net">按净赚排（谁给钱多）</option>
+          <option value="perKm">按每公里排</option>
+          <option value="short">按里程排（离得近的在前）</option>
+        </select>
+      </div>
+      <div id="boardRows"></div>
+      <div class="hd" style="margin:10px 0 0"><span class="muted" id="boardCount"></span>
+        <button class="linkbtn" id="boardClear" style="margin:0">清空</button></div>
+      <div class="tip" id="boardTip" style="margin-top:6px">单子在平台上是会跑掉的，贴进来超过十分钟我会标出来——别对着旧单子等。</div>
+    </div>
+  </details>
+
   <section class="card" id="cmpCard" hidden>
     <div class="hd"><span>对比</span><span class="muted" id="cmpCount"></span></div>
     <div id="cmpRows"></div>
@@ -230,6 +268,7 @@ details.card .body{margin-top:12px}
       <b>时薪</b>：低于目标时薪七折就是「不划算」，别只看运费金额大。<br />
       <b>保本价 / 报价起</b>：保本价是油钱加过路加固定摊，低于它跑一趟就亏；报价起是按目标时薪算出来的，有人让你报价就照这个数往上说。<br />
       <b>常用线路</b>：填好里程、过路、等待，点「存成常用线路」，下次点一下名字就带回来，只填运费。<br />
+      <b>多单比价</b>：平台上的单复制出来，一行一单贴进框里（写成「杭州→广州 1141公里 5200元 等2小时」），自动按你的油耗和标准算净赚、时薪，按「按时薪排／按净赚排／按里程排」看谁划得来，点「算这单」直接把数填回上面，再点「记下这一单」入账。<br />
       <b>加入对比</b>：屏幕上几个单拿不准，算完各点一次「加入对比」，谁时薪高一眼看出来。<br />
       <b>加油记油耗</b>：「我的车和标准」里记两次加油（里程表读数＋升数），就能算出他车的真实油耗，点「用这个油耗」自动改。<br />
       <b>地图算里程</b>：填「现在的位置／取货地点／目的地」，点「算路线并填进去」，公里数、过路费、平均时速一次填好，只剩运费要自己填。<br />
@@ -248,7 +287,7 @@ details.card .body{margin-top:12px}
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
   var KEY = "truckLedger.v1";
-  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [], last: null,
+  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [], board: [], last: null,
     amapKey: "92f7745dba3d8592d9a5d21691c38abd", amapSec: "74bc3446ff478240796f2aaa0b8862ba" };
   var S = Object.assign({}, DEFAULTS);
   var orders = [];
@@ -497,6 +536,179 @@ details.card .body{margin-top:12px}
     persist();
     renderRoutes();
     toast("已存线路：" + name);
+  });
+
+  /* ---------------- 多单比价 ---------------- */
+  var board = Array.isArray(S.board) ? S.board.slice() : [];
+  var BOARD_MAX = 20;
+
+  function bid() { return "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function ago(ts) {
+    var d = Math.max(0, Date.now() - (ts || 0)) / 60000;
+    if (d < 1) return "刚刚";
+    if (d < 60) return Math.round(d) + " 分钟前";
+    return Math.round(d / 60) + " 小时前";
+  }
+
+  function bcalc(o) {
+    var totalKm = (o.km || 0) + (o.dead || 0);
+    var fuelCost = totalKm / 100 * S.fuel * S.price;
+    var cost = fuelCost + (o.toll || 0) + (o.other || 0) + S.fixed;
+    var net = (o.freight || 0) - cost;
+    var hrs = S.speed > 0 ? totalKm / S.speed + (o.wait || 0) : 0;
+    return {
+      totalKm: totalKm, net: net, hrs: hrs,
+      perKm: totalKm > 0 ? net / totalKm : null,
+      hourly: hrs > 0 ? net / hrs : null
+    };
+  }
+
+  // 从一段平台复制出来的文字里认数字：一行一单
+  function parseOrder(line) {
+    var t = String(line || "").replace(/[，,；;、]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return null;
+    var o = { id: bid(), ts: Date.now(), from: "", to: "", km: 0, dead: 0, freight: 0, wait: 0, toll: 0, other: 0 };
+    var m;
+    if ((m = t.match(/空驶\s*(\d+(?:\.\d+)?)/))) { o.dead = parseFloat(m[1]); t = t.replace(m[0], " "); }
+    if ((m = t.match(/过路费?\s*[¥￥]?\s*(\d+(?:\.\d+)?)/))) { o.toll = parseFloat(m[1]); t = t.replace(m[0], " "); }
+    if ((m = t.match(/(?:等(?:候|待)?|排队)\s*(\d+(?:\.\d+)?)\s*(?:小时|钟头|h)/i))) { o.wait = parseFloat(m[1]); t = t.replace(m[0], " "); }
+    if ((m = t.match(/(\d+(?:\.\d+)?)\s*(?:公里|千米|km)/i))) { o.km = parseFloat(m[1]); t = t.replace(m[0], " "); }
+    if ((m = t.match(/([¥￥]\s*\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:元|块钱|块)/))) {
+      o.freight = parseFloat(String(m[0]).replace(/[¥￥元块钱\s]/g, "")) || 0;
+      t = t.replace(m[0], " ");
+    }
+    var parts = t.split(/\s*(?:→|➡|⇒|—>|-{1,2}>|至|到|～|~|\|)\s*/)
+      .map(function (x) { return x.trim(); })
+      .filter(function (x) { return x && !/^\d+$/.test(x); });
+    if (parts.length >= 2) { o.from = parts[0].slice(0, 20); o.to = parts[1].slice(0, 20); }
+    else if (parts.length === 1) { o.from = parts[0].slice(0, 20); }
+    if (!o.km && !o.freight) return null;
+    return o;
+  }
+
+  function renderBoard() {
+    var sort = $("boardSort").value || "hourly";
+    var list = board.map(function (o) {
+      var c = bcalc(o);
+      return { o: o, c: c };
+    });
+    var cmp = {
+      hourly: function (a, b) { return (b.c.hourly == null ? -1e9 : b.c.hourly) - (a.c.hourly == null ? -1e9 : a.c.hourly); },
+      net: function (a, b) { return b.c.net - a.c.net; },
+      perKm: function (a, b) { return (b.c.perKm == null ? -1e9 : b.c.perKm) - (a.c.perKm == null ? -1e9 : a.c.perKm); },
+      short: function (a, b) { return a.c.totalKm - b.c.totalKm; }
+    }[sort] || null;
+    if (cmp) list.sort(cmp);
+
+    var bestIdx = -1, best = -Infinity;
+    list.forEach(function (r, i) {
+      if (r.c.hourly != null && r.c.hourly > best) { best = r.c.hourly; bestIdx = i; }
+    });
+
+    $("boardRows").innerHTML = list.length ? list.map(function (r, i) {
+      var o = r.o, c = r.c;
+      var stale = Date.now() - (o.ts || 0) > 10 * 60000;
+      var nm = (o.from ? o.from + " → " : "") + (o.to || "这单");
+      var low = c.hourly != null && c.hourly < S.target * 0.7;
+      return '<div class="cmp' + (stale ? " stale" : "") + '">'
+        + '<div class="m">'
+        + '<div class="l1"><b class="' + (c.net < 0 ? "neg" : "") + '">¥' + fmt(c.net, 0) + "</b>"
+        + "<em>净赚 · " + (c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0) + "/时") + " · "
+        + (c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2) + "/公里") + "</em></div>"
+        + '<div class="l2">' + esc(nm) + " · " + fmt(c.totalKm, 0) + "公里"
+        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "")
+        + (o.wait > 0 ? " · 等 " + fmt(o.wait, 1) + "h" : "") + " · 运费 " + fmt(o.freight, 0) + "</div>"
+        + '<div class="l2">' + (stale ? '<span class="oldmark">' + ago(o.ts) + "，这单多半没了</span>" : ago(o.ts))
+        + (low ? " · 时薪太低" : "") + "</div>"
+        + "</div>"
+        + (i === bestIdx && list.length > 1 ? '<span class="best">最赚</span>' : "")
+        + '<button class="take" data-take="' + esc(o.id) + '">算这单</button>'
+        + '<button class="del" data-bi="' + esc(o.id) + '">×</button>'
+        + "</div>";
+    }).join("") : '<div class="empty">还没单子。把平台上的单贴上面，或者点「加当前这单」。</div>';
+
+    $("boardCount").textContent = list.length
+      ? "共 " + list.length + " 单" + (list[0].c.hourly != null ? "，第一名单时薪 ¥" + fmt(list[0].c.hourly, 0) : "")
+      : "";
+  }
+
+  function addPaste() {
+    var raw = $("pasteBox").value || "";
+    var lines = raw.split(/\r?\n/).filter(function (x) { return x.trim(); });
+    if (!lines.length) { toast("先把单子贴进框里"); return; }
+    var ok = [], bad = 0;
+    lines.forEach(function (ln) {
+      var o = parseOrder(ln);
+      if (o) ok.push(o); else bad++;
+    });
+    if (!ok.length) { toast("一行都没认出数字，写成「杭州→广州 1141公里 5200元」这样"); return; }
+    ok.reverse().forEach(function (o) { board.unshift(o); });
+    if (board.length > BOARD_MAX) board = board.slice(0, BOARD_MAX);
+    S.board = board;
+    persist();
+    $("pasteBox").value = "";
+    renderBoard();
+    toast("加了 " + ok.length + " 单" + (bad ? "，" + bad + " 行没认出数字" : ""));
+  }
+
+  function addManual() {
+    var c = calc();
+    if (c.freight <= 0) { toast("先把上面的运费填上"); return; }
+    var pick = $("locPick") ? $("locPick").value.trim() : "";
+    var dest = $("locDest") ? $("locDest").value.trim() : "";
+    board.unshift({
+      id: bid(), ts: Date.now(), from: pick, to: dest,
+      km: c.km, dead: c.dead, freight: c.freight, wait: c.wait, toll: c.toll, other: c.other
+    });
+    if (board.length > BOARD_MAX) board = board.slice(0, BOARD_MAX);
+    S.board = board;
+    persist();
+    renderBoard();
+    toast("加进比价了");
+  }
+
+  function takeBoard(id) {
+    var o = null;
+    board.forEach(function (x) { if (x.id === id) o = x; });
+    if (!o) return;
+    setVal("freight", o.freight || 0);
+    setVal("km", o.km || 0);
+    setVal("dead", o.dead || 0);
+    setVal("wait", o.wait || 0);
+    setVal("toll", o.toll || 0);
+    setVal("other", o.other || 0);
+    render();
+    rememberInputs();
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { window.scrollTo(0, 0); }
+    toast("填进上面的算账了，看一眼再点「记下这一单」");
+  }
+
+  // 每分钟刷一遍时间戳，超过十分钟的单子自动变灰，提醒别再等了
+  setInterval(function () { if (!$("boardCard") || $("boardCard").open) renderBoard(); }, 60000);
+
+  $("addPaste").addEventListener("click", addPaste);
+  $("addManual").addEventListener("click", addManual);
+  $("boardSort").addEventListener("change", renderBoard);
+  $("boardClear").addEventListener("click", function () {
+    board = [];
+    S.board = board;
+    persist();
+    renderBoard();
+    toast("比价板已清空");
+  });
+  $("boardRows").addEventListener("click", function (e) {
+    var take = e.target.closest && e.target.closest("[data-take]");
+    if (take) { takeBoard(take.getAttribute("data-take")); return; }
+    var del = e.target.closest && e.target.closest("[data-bi]");
+    if (del) {
+      var id = del.getAttribute("data-bi");
+      board = board.filter(function (x) { return x.id !== id; });
+      S.board = board;
+      persist();
+      renderBoard();
+      toast("删了");
+    }
   });
 
   function renderCompare() {
@@ -906,6 +1118,7 @@ details.card .body{margin-top:12px}
     toast("已删除");
   });
 
+  renderBoard();
   renderRoutes();
   renderCompare();
   renderFuel();
