@@ -247,8 +247,8 @@ details.card .body{margin-top:12px}
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
   var KEY = "truckLedger.v1";
-  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [],
-    amapKey: "", amapSec: "" };
+  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [], last: null,
+    amapKey: "92f7745dba3d8592d9a5d21691c38abd", amapSec: "74bc3446ff478240796f2aaa0b8862ba" };
   var S = Object.assign({}, DEFAULTS);
   var orders = [];
 
@@ -648,6 +648,8 @@ details.card .body{margin-top:12px}
       });
       $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
       if (MAP.map) MAP.map.resize();
+      // 打开就顺手尝试一次定位，填好「现在的位置」；拿不到就安静地不管
+      if (!$("locNow").value && window.isSecureContext) setTimeout(function () { locate(true); }, 600);
     } catch (e) {
       $("mapInfo").textContent = "地图初始化失败：" + (e && e.message ? e.message : e);
     }
@@ -721,8 +723,10 @@ details.card .body{margin-top:12px}
     $("amapSec").value = S.amapSec || "";
   });
 
-  $("btnGeo").addEventListener("click", function () {
-    if (!MAP.geo) { toast("地图还没加载好"); return; }
+  $("btnGeo").addEventListener("click", function () { locate(false); });
+
+  function locate(silent) {
+    if (!MAP.geo) { if (!silent) toast("地图还没加载好"); return; }
     $("mapInfo").textContent = "在定位…";
     MAP.geo.getCurrentPosition(function (status, res) {
       var pos = res && res.position;
@@ -739,13 +743,15 @@ details.card .body{margin-top:12px}
             MAP.txt.now = a;
           }
         });
-      } else {
+      } else if (!silent) {
         $("mapInfo").textContent = window.isSecureContext
           ? "定位失败：手机设置里给这个浏览器开「位置」权限，再点一次；还是不行就手动填个大概名字（比如「萧山区」）。"
           : "定位失败：这个页面不是 https 打开的，浏览器不给位置。用我发的那个 https 网址打开就能定位，或者手动填地点。";
+      } else {
+        $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
       }
     });
-  });
+  }
 
   $("btnRoute").addEventListener("click", function () {
     if (!MAP.map) { toast("先把 Key 保存，让地图加载出来"); return; }
@@ -758,6 +764,8 @@ details.card .body{margin-top:12px}
 
   var mapCard = $("mapCard");
   mapCard.addEventListener("toggle", function () {
+    S.mapOpen = mapCard.open;
+    persist();
     if (!mapCard.open) return;
     if (!MAP.map && S.amapKey) { loadMap(); return; }
     if (MAP.map) setTimeout(function () { MAP.map.resize(); }, 80);
@@ -767,6 +775,8 @@ details.card .body{margin-top:12px}
   $("amapSec").value = S.amapSec || "";
   showSetup(!S.amapKey);
   // 地图脚本等真的展开这张卡再去加载，不展开就不联网
+  // 第一次打开就把地图卡展开（上次手动收起来了才保持收起）
+  if (S.amapKey && S.mapOpen !== false) mapCard.open = true;
   if (S.amapKey && mapCard.open) loadMap();
 
   // 设置区绑定
@@ -785,8 +795,20 @@ details.card .body{margin-top:12px}
   });
 
   ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
-    $(id).addEventListener("input", render);
+    $(id).addEventListener("input", function () { render(); rememberInputs(); });
   });
+  function rememberInputs() {
+    S.last = {
+      freight: $("freight").value, km: $("km").value, dead: $("dead").value,
+      wait: $("wait").value, toll: $("toll").value, other: $("other").value
+    };
+    persist();
+  }
+  if (S.last && typeof S.last === "object") {
+    ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
+      if (S.last[id] != null && S.last[id] !== "") $(id).value = S.last[id];
+    });
+  }
 
   $("save").addEventListener("click", saveOrder);
   $("export").addEventListener("click", exportCsv);
