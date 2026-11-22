@@ -695,7 +695,20 @@ details.card .body{margin-top:12px}
     try { $("freight").focus(); } catch (e) {}
   }
 
-  // 算一段路线；失败自动再试一次（手机网抖一下很常见），还不行就把高德给的原因说出来
+  // 把坐标统一成 [经度, 纬度] 数组。
+  // 定位插件给的点、地理编码给的点、输入提示给的点，是不同来源的对象；
+  // 直接丢给路径规划有可能被判成参数不合法，回调就只剩一句 "error"，什么原因都不给。
+  function num(v) { v = parseFloat(v); return isNaN(v) ? null : v; }
+  function ptArr(p) {
+    if (!p) return null;
+    var lng = num(p.lng !== undefined ? p.lng : (typeof p.getLng === "function" ? p.getLng() : NaN));
+    var lat = num(p.lat !== undefined ? p.lat : (typeof p.getLat === "function" ? p.getLat() : NaN));
+    if (lng === null || lat === null) return null;
+    if (lng < 70 || lng > 140 || lat < 3 || lat > 55) return null;
+    return [lng, lat];
+  }
+
+  // 算一段路线；失败自动再来一次（换个干净的实例），还不行就把高德给的原因说出来
   function driveOnce(a, b, cb) {
     var tries = 0;
     (function attempt() {
@@ -715,7 +728,7 @@ details.card .body{margin-top:12px}
           if (r) { cb(null, r); return; }
           var why = (res && (res.info || res.infocode)) || st || "未知原因";
           if (tries++ < 2) {
-            if (why === "error") MAP.drivingBroken = true; // 画线的那个实例不靠谱，后面别再用了
+            if (!(res && (res.info || res.infocode))) MAP.drivingBroken = true; // 画线的那个实例不靠谱，后面别再用了
             setTimeout(attempt, 700);
             return;
           }
@@ -733,22 +746,47 @@ details.card .body{margin-top:12px}
     $("mapInfo").textContent = "在算路线，稍等…";
     try { if (MAP.map) MAP.map.resize(); } catch (e) {}
     try { if (MAP.driving) MAP.driving.clear(); } catch (e) {}
-    driveOnce(p.now, p.pick, function (e1, r1) {
-      if (!r1) {
-        $("mapInfo").innerHTML = "现在到取货地这段没算出来。" +
-          "<br />高德说的原因：<b>" + esc(e1) + "</b>" +
-          "<br />多数是网慢或者地点写得太笼统。等一下再点一次；" +
-          "或者把地点改得具体点（加个区、路名），也可以先在地图上点一下定位。";
-        return;
-      }
-      driveOnce(p.pick, p.dest, function (e2, r2) {
+
+    var A = ptArr(p.now), B = ptArr(p.pick), C = ptArr(p.dest);
+    if (!B || !C) {
+      $("mapInfo").textContent = "取货地或目的地还没定准，在输入框下面点一条提示更保险。";
+      return;
+    }
+
+    function failNow(msg) {
+      $("mapInfo").innerHTML = "现在到取货地这段没算出来。" +
+        "<br />高德说的原因：<b>" + esc(msg) + "</b>" +
+        "<br />多半是「现在的位置」那个定位点它不认，或者网慢。" +
+        "先手动把「现在的位置」改成一个地名（比如「大连甘井子区」），再点一次就行。";
+    }
+
+    function leg2(dead) {
+      driveOnce(B, C, function (e2, r2) {
         if (!r2) {
           $("mapInfo").innerHTML = "取货地到目的地这段没算出来。" +
             "<br />高德说的原因：<b>" + esc(e2) + "</b>" +
-            "<br />同样，等一下再点一次；地点越具体越好（比如「广州白云区物流园」比「广州站」好找）。";
+            "<br />地点越具体越好（「广州白云机场国内货站」比「白云」好找），等一下再点一次。";
           return;
         }
-        applyRoute(r1, r2);
+        applyRoute(dead, r2);
+      });
+    }
+
+    driveOnce(A, B, function (e1, r1) {
+      if (r1) { leg2(r1); return; }
+      // 换个算法重试：把「现在的位置」当文字重新解析一遍，不用定位插件那个点
+      var txt = ($("locNow").value || "").trim();
+      if (!txt || /^当前位置/.test(txt)) { failNow(e1); return; }
+      new window.AMap.Geocoder().getLocation(txt, function (st, res) {
+        var g = st === "complete" && res && res.geocodes && res.geocodes[0];
+        var A2 = g && ptArr(g.location);
+        if (!A2) { failNow(e1); return; }
+        MAP.pts.now = g.location;
+        MAP.txt.now = txt;
+        driveOnce(A2, B, function (e1b, r1b) {
+          if (r1b) { leg2(r1b); return; }
+          failNow(e1b || e1);
+        });
       });
     });
   }
