@@ -208,6 +208,7 @@ details.card .body{margin-top:12px}
         <button class="btn" id="addPaste">贴进来算</button>
         <button class="btn ghost" id="addManual">加当前这单</button>
       </div>
+      <button class="linkbtn" id="readClip">或：从剪贴板读一单（先在平台里复制）</button>
       <div class="boardtop">
         <select id="boardSort">
           <option value="hourly">按时薪排（谁更值钱）</option>
@@ -687,6 +688,22 @@ details.card .body{margin-top:12px}
   // 每分钟刷一遍时间戳，超过十分钟的单子自动变灰，提醒别再等了
   setInterval(function () { if (!$("boardCard") || $("boardCard").open) renderBoard(); }, 60000);
 
+  // 在货拉拉/运满满里长按复制单子文字，回来点这一下，直接算
+  function readClip() {
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      toast("这个浏览器不让读剪贴板，长按输入框粘贴一下就行");
+      return;
+    }
+    navigator.clipboard.readText().then(function (txt) {
+      if (!txt || !txt.trim()) { toast("剪贴板里没有字，先去平台里复制单子"); return; }
+      $("pasteBox").value = txt.trim();
+      addPaste();
+    }).catch(function () {
+      toast("没读到剪贴板，长按输入框粘贴一下就行");
+    });
+  }
+
+  $("readClip").addEventListener("click", readClip);
   $("addPaste").addEventListener("click", addPaste);
   $("addManual").addEventListener("click", addManual);
   $("boardSort").addEventListener("change", renderBoard);
