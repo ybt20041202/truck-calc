@@ -601,7 +601,7 @@ details.card .body{margin-top:12px}
   });
 
   // ===== 地图（可选，要用高德 Key）=====
-  var MAP = { map: null, geo: null, driving: null, ac: [], pts: {}, txt: {}, loaded: false };
+  var MAP = { map: null, geo: null, driving: null, drivingBroken: false, ac: [], pts: {}, txt: {}, loaded: false };
 
   function setVal(id, v) {
     var el = $(id);
@@ -699,17 +699,30 @@ details.card .body{margin-top:12px}
   function driveOnce(a, b, cb) {
     var tries = 0;
     (function attempt() {
-      var ok = false;
+      var d;
       try {
-        MAP.driving.search(a, b, function (st, res) {
+        // 第一次用挂在图上的实例（能画出线）；它要是出问题，就换一个干净的、不画线的实例再算
+        d = (tries === 0 && MAP.driving && !MAP.drivingBroken)
+          ? MAP.driving
+          : new window.AMap.Driving({ policy: window.AMap.DrivingPolicy.LEAST_TIME });
+      } catch (e) {
+        d = null;
+      }
+      if (!d) { cb("地图实例没准备好"); return; }
+      try {
+        d.search(a, b, function (st, res) {
           var r = st === "complete" && res && res.routes && res.routes[0];
-          if (r) { ok = true; cb(null, r); return; }
+          if (r) { cb(null, r); return; }
           var why = (res && (res.info || res.infocode)) || st || "未知原因";
-          if (tries++ < 1) { setTimeout(attempt, 900); return; }
+          if (tries++ < 2) {
+            if (why === "error") MAP.drivingBroken = true; // 画线的那个实例不靠谱，后面别再用了
+            setTimeout(attempt, 700);
+            return;
+          }
           cb(String(why));
         });
       } catch (e) {
-        if (tries++ < 1) { setTimeout(attempt, 900); return; }
+        if (tries++ < 2) { MAP.drivingBroken = true; setTimeout(attempt, 700); return; }
         cb("页面报错：" + (e && e.message ? e.message : e));
       }
     })();
@@ -718,6 +731,8 @@ details.card .body{margin-top:12px}
   function runRoute() {
     var p = MAP.pts;
     $("mapInfo").textContent = "在算路线，稍等…";
+    try { if (MAP.map) MAP.map.resize(); } catch (e) {}
+    try { if (MAP.driving) MAP.driving.clear(); } catch (e) {}
     driveOnce(p.now, p.pick, function (e1, r1) {
       if (!r1) {
         $("mapInfo").innerHTML = "现在到取货地这段没算出来。" +
