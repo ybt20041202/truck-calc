@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="robots" content="noindex,nofollow,noarchive" />
+<meta name="theme-color" content="#eef1f4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>接单算账</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#eef1f4;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+  --green:#0f7a53;--red:#b91c1c;--amber:#b45309;--dark:#111827;
+}
+html,body{margin:0;max-width:100%;overflow-x:hidden;background:var(--bg);color:var(--ink);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{padding:calc(14px + env(safe-area-inset-top)) 12px calc(30px + env(safe-area-inset-bottom))}
+.app{max-width:560px;margin:0 auto}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:-.3px}
+.sub{margin:0 0 14px;color:var(--muted);font-size:13px}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;
+  box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 18px rgba(15,23,42,.04)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.f{display:block}
+.f span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input[type=number]{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:18px;font-weight:600;color:var(--ink);background:#fbfcfd;
+  font-variant-numeric:tabular-nums;appearance:none}
+input[type=number]:focus{outline:none;border-color:#94a3b8;background:#fff}
+input[type=text]{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+  font-size:16px;color:var(--ink);background:#fbfcfd;font-family:inherit}
+input[type=text]:focus{outline:none;border-color:#94a3b8;background:#fff}
+input[type=text]::placeholder{color:#94a3b8}
+.result{margin:14px 0 12px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid var(--line)}
+.verdict{display:inline-block;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:#e2e8f0;color:#475569}
+.verdict.ok{background:#dcfce7;color:#166534}
+.verdict.warn{background:#fef3c7;color:#92400e}
+.verdict.bad{background:#fee2e2;color:#991b1b}
+.big{display:flex;align-items:baseline;gap:2px;margin:8px 0 0}
+.big .cur{font-size:22px;font-weight:700;color:var(--muted)}
+.big .n{font-size:44px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums}
+.big .unit{font-size:13px;color:var(--muted);margin-left:6px}
+.big.neg .n{color:var(--red)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats i{font-size:11px;color:var(--muted);font-style:normal}
+.brk{margin-top:11px;padding-top:9px;border-top:1px dashed var(--line);
+  font-size:12px;color:var(--muted);line-height:1.7}
+.quote{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;
+  padding-top:10px;border-top:1px dashed var(--line)}
+.quote span{display:block;font-size:11px;color:var(--muted);margin-bottom:1px}
+.quote b{font-size:17px;font-variant-numeric:tabular-nums}
+.routes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.routes:empty{display:none}
+.chip{border:1px solid var(--line);background:#f8fafc;color:var(--ink);font-family:inherit;
+  font-size:12px;font-weight:600;padding:6px 9px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:7px;line-height:1.2}
+.chip b{color:#94a3b8;font-size:14px;font-weight:700;padding:0 1px}
+.linkbtn{border:0;background:none;color:#0f766e;font-family:inherit;font-size:12px;
+  font-weight:600;padding:4px 0;margin:2px 0 0}
+.btnrow{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;margin-top:12px}
+.btnrow .btn{margin-top:0}
+.btnrow .btn.ghost{padding:14px 6px;font-size:14px}
+.hd{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;
+  font-size:15px;margin-bottom:10px}
+.hd .muted{font-weight:500;font-size:11px;color:var(--muted)}
+.cmp{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.cmp:first-child{border-top:0;padding-top:2px}
+.cmp .m{flex:1;min-width:0}
+.cmp .l1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cmp .l1 b{font-size:18px;font-variant-numeric:tabular-nums}
+.cmp .l1 b.neg{color:var(--red)}
+.cmp .l1 em{font-style:normal;font-size:11px;color:var(--muted)}
+.cmp .l2{font-size:11px;color:var(--muted);margin-top:2px}
+.best{flex:0 0 auto;background:#dcfce7;color:#166534;font-size:10px;font-weight:700;
+  padding:3px 7px;border-radius:999px}
+.rowin{display:flex;gap:8px;align-items:stretch}
+.rowin input{flex:1;min-width:0}
+.mini{flex:0 0 auto;border:1px solid var(--line);background:#f1f5f9;color:var(--ink);
+  font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border-radius:10px;
+  min-height:44px}
+.mini:active{opacity:.85}
+#mapBox{height:200px;border-radius:12px;margin-top:10px;overflow:hidden;background:#e6edf5}
+#mapInfo{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.7}
+.btn{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;line-height:1.25;
+  background:var(--dark);color:#fff;font-size:16px;font-weight:700;font-family:inherit}
+.btn:active{opacity:.88;transform:scale(.995)}
+.btn.ghost{background:#f1f5f9;color:#0f172a;font-weight:600;font-size:14px;padding:11px}
+details.card summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"展开";font-size:12px;font-weight:500;color:var(--muted);
+  flex:0 0 auto;white-space:nowrap}
+details.card[open] summary::after{content:"收起"}
+details.card .body{margin-top:12px}
+.ledgerhead{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.ledgerhead>div{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.ledgerhead .k{display:block;font-size:11px;color:var(--muted);margin-bottom:1px}
+.ledgerhead b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.ledgerhead .k2{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+.row{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .m{flex:1;min-width:0}
+.row .l1{display:flex;gap:8px;align-items:baseline;font-weight:700;font-variant-numeric:tabular-nums}
+.row .l1 em{font-style:normal;color:var(--muted);font-weight:500;font-size:12px}
+.row .l1 .neg{color:var(--red)}
+.row .l2{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .del{border:0;background:#f1f5f9;color:#64748b;width:32px;height:32px;flex:0 0 32px;
+  border-radius:9px;font-size:16px;line-height:1;font-family:inherit}
+.empty{color:var(--muted);font-size:13px;padding:12px 0;text-align:center}
+.tip{font-size:12px;color:var(--muted);line-height:1.75}
+.tip b{color:#334155}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);opacity:0;
+  background:#111827;color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;
+  pointer-events:none;transition:.22s;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>接单算账</h1>
+  <p class="sub">运费、里程、等待时间填进去，马上知道这单值不值得跑</p>
+
+  <details class="card" id="mapCard">
+    <summary>地图算里程（可选）</summary>
+    <div class="body">
+      <div id="mapSetup">
+        <div class="tip" style="margin-bottom:10px">
+          这一块用的是<b>高德地图</b>，要一个免费 Key 才能用：打开 <b>lbs.amap.com</b> → 注册 → 实名认证（个人，几分钟）→ 控制台 → 应用管理 → 创建新应用 → 添加 Key → 服务平台选 <b>Web端(JS API)</b>。新申请的 Key 还会给一个「安全密钥」，两个都粘到下面。
+        </div>
+        <label class="f"><span>高德 Key</span><input id="amapKey" type="text" placeholder="例如 a1b2c3d4e5f6..." autocomplete="off" /></label>
+        <label class="f"><span>安全密钥 jscode（新 Key 才有，没有就空着）</span><input id="amapSec" type="text" placeholder="选填" autocomplete="off" /></label>
+        <button class="btn ghost" id="btnKey" style="margin-top:10px">保存并加载地图</button>
+        <div class="tip" style="margin-top:8px">「定位」按钮要靠浏览器给位置权限，只有 https 的网页（或者放到网上）才给；双击本地打开的话，地图和算路线一般还能用，定位会失败，手动填地点就行。</div>
+      </div>
+
+      <div id="mapMain" hidden>
+        <label class="f"><span>现在的位置</span>
+          <div class="rowin"><input id="locNow" type="text" placeholder="点右边「定位」，或者输入" autocomplete="off" /><button class="mini" id="btnGeo">定位</button></div>
+        </label>
+        <label class="f" style="margin-top:10px"><span>取货地点</span><input id="locPick" type="text" placeholder="例如 义乌国际商贸城" autocomplete="off" /></label>
+        <label class="f" style="margin-top:10px"><span>目的地</span><input id="locDest" type="text" placeholder="例如 广州白云物流园" autocomplete="off" /></label>
+        <button class="btn" id="btnRoute" style="margin-top:12px">算路线并填进去</button>
+        <div id="mapBox"></div>
+        <div id="mapInfo"></div>
+        <button class="linkbtn" id="btnKeyReset" style="margin-top:6px">换一个 Key</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="card">
+    <div class="routes" id="routes"></div>
+    <div class="grid">
+      <label class="f"><span>运费（元）</span><input id="freight" type="number" inputmode="decimal" placeholder="0" /></label>
+      <label class="f"><span>载货里程（公里）</span><input id="km" type="number" inputmode="decimal" placeholder="0" /></label>
+      <label class="f"><span>空驶里程（公里）</span><input id="dead" type="number" inputmode="decimal" placeholder="0" /></label>
+      <label class="f"><span>装卸等待（小时）</span><input id="wait" type="number" inputmode="decimal" placeholder="0" /></label>
+      <label class="f"><span>过路费（元）</span><input id="toll" type="number" inputmode="decimal" placeholder="0" /></label>
+      <label class="f"><span>其他费用（元）</span><input id="other" type="number" inputmode="decimal" placeholder="0" /></label>
+    </div>
+
+    <button class="linkbtn" id="saveRoute">＋ 把这条线存成常用线路</button>
+
+    <div class="result" id="result">
+      <div class="verdict" id="verdict">填数字看结果</div>
+      <div class="big" id="bigrow"><span class="cur">¥</span><span class="n" id="net">0</span><span class="unit">净赚</span></div>
+      <div class="stats">
+        <div><b id="perkm">—</b><i>每公里净赚</i></div>
+        <div><b id="hourly">—</b><i>每小时净赚</i></div>
+        <div><b id="hours">—</b><i>预计用时</i></div>
+      </div>
+      <div class="quote">
+        <div><span>保本价（低于就倒贴）</span><b id="qCost">—</b></div>
+        <div><span>报价起（才够目标时薪）</span><b id="qBid">—</b></div>
+      </div>
+      <div class="brk" id="brk"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn" id="save">记下这一单</button>
+      <button class="btn ghost" id="addCmp">加入对比</button>
+    </div>
+  </section>
+
+  <section class="card" id="cmpCard" hidden>
+    <div class="hd"><span>对比</span><span class="muted" id="cmpCount"></span></div>
+    <div id="cmpRows"></div>
+    <button class="linkbtn" id="cmpClear">清空对比</button>
+  </section>
+
+  <details class="card">
+    <summary>我的车和标准</summary>
+    <div class="body grid">
+      <label class="f"><span>油耗（升/百公里）</span><input id="setFuel" type="number" inputmode="decimal" /></label>
+      <label class="f"><span>油价（元/升）</span><input id="setPrice" type="number" inputmode="decimal" /></label>
+      <label class="f"><span>平均时速（公里）</span><input id="setSpeed" type="number" inputmode="decimal" /></label>
+      <label class="f"><span>目标时薪（元）</span><input id="setTarget" type="number" inputmode="decimal" /></label>
+      <label class="f" style="grid-column:1/-1"><span>本趟分摊固定成本（元，车贷保险保养，不填就是 0）</span><input id="setFixed" type="number" inputmode="decimal" /></label>
+      <div style="grid-column:1/-1">
+        <div class="hd" style="margin:12px 0 8px">加油记油耗</div>
+        <div class="grid">
+          <label class="f"><span>里程表读数（公里）</span><input id="odo" type="number" inputmode="decimal" placeholder="0" /></label>
+          <label class="f"><span>这次加了（升）</span><input id="liters" type="number" inputmode="decimal" placeholder="0" /></label>
+        </div>
+        <button class="btn ghost" id="addFuel" style="margin-top:10px">记一次加油</button>
+        <div class="tip" id="fuelReal" style="margin-top:8px">记两次加油就能算出真实百公里油耗。</div>
+        <button class="linkbtn" id="useFuel" hidden>用这个油耗</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="card">
+    <div class="ledgerhead">
+      <div><span class="k">今日</span><b id="tToday">—</b><span class="k2" id="tTodayRate"></span></div>
+      <div><span class="k">本月</span><b id="tMonth">—</b><span class="k2" id="tMonthRate"></span></div>
+    </div>
+    <div id="rows"></div>
+    <button class="btn ghost" id="export">导出账本（Excel 能打开）</button>
+  </section>
+
+  <details class="card">
+    <summary>怎么用</summary>
+    <div class="body tip">
+      <b>空驶里程</b>：去装货点路上跑的空路，也算成本，一定要填。<br />
+      <b>装卸等待</b>：排队、装车、卸货的时间，时薪算不算得过来全看它。<br />
+      <b>每公里净赚</b>：低于 1.5 元要格外小心，长途专线单价可以低一点，但总时薪不能塌。<br />
+      <b>时薪</b>：低于目标时薪七折就是「不划算」，别只看运费金额大。<br />
+      <b>保本价 / 报价起</b>：保本价是油钱加过路加固定摊，低于它跑一趟就亏；报价起是按目标时薪算出来的，有人让你报价就照这个数往上说。<br />
+      <b>常用线路</b>：填好里程、过路、等待，点「存成常用线路」，下次点一下名字就带回来，只填运费。<br />
+      <b>加入对比</b>：屏幕上几个单拿不准，算完各点一次「加入对比」，谁时薪高一眼看出来。<br />
+      <b>加油记油耗</b>：「我的车和标准」里记两次加油（里程表读数＋升数），就能算出他车的真实油耗，点「用这个油耗」自动改。<br />
+      <b>地图算里程</b>：填「现在的位置／取货地点／目的地」，点「算路线并填进去」，公里数、过路费、平均时速一次填好，只剩运费要自己填。<br />
+      <b>油耗默认 30 升</b>：按 9.6 米车填的，4.2 米轻卡改成 13–16 升更准。<br />
+      不开地图的话，数据只存在这台手机里，不上传也不联网；用地图算里程才会连一次高德问路线。<br />
+      <b>记录存不住？</b>用 Chrome、夸克、Edge 这类浏览器打开；在微信里直接点开，可能不让存。
+    </div>
+  </details>
+
+  <p class="tip" style="text-align:center;margin:4px 0 0">算完点「记下这一单」，月底就知道哪条线真赚钱。</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = "truckLedger.v1";
+  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [], last: null,
+    amapKey: "92f7745dba3d8592d9a5d21691c38abd", amapSec: "74bc3446ff478240796f2aaa0b8862ba" };
+  var S = Object.assign({}, DEFAULTS);
+  var orders = [];
+
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var d = JSON.parse(raw);
+      if (d && typeof d === "object") {
+        S = Object.assign({}, DEFAULTS, d.settings || {});
+        orders = Array.isArray(d.orders) ? d.orders : [];
+      }
+    }
+  } catch (e) {}
+  if (!Array.isArray(S.routes)) S.routes = [];
+  if (!Array.isArray(S.compare)) S.compare = [];
+  if (!Array.isArray(S.fuels)) S.fuels = [];
+
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify({ settings: S, orders: orders })); } catch (e) {}
+  }
+
+  function num(v) {
+    var x = parseFloat(String(v == null ? "" : v).replace(",", "."));
+    return isFinite(x) && x > 0 ? x : 0;
+  }
+
+  function fmt(n, d) {
+    if (n == null || !isFinite(n)) return "—";
+    d = d == null ? 0 : d;
+    var s = Math.abs(n).toFixed(d).split(".");
+    s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (n < 0 ? "-" : "") + s.join(".");
+  }
+
+  function calc() {
+    var freight = num($("freight").value), km = num($("km").value), dead = num($("dead").value),
+        wait = num($("wait").value), toll = num($("toll").value), other = num($("other").value);
+    var totalKm = km + dead;
+    var fuelCost = totalKm / 100 * S.fuel * S.price;
+    var cost = fuelCost + toll + other + S.fixed;
+    var net = freight - cost;
+    var hrs = totalKm / S.speed + wait;
+    return {
+      freight: freight, km: km, dead: dead, wait: wait, toll: toll, other: other,
+      totalKm: totalKm, fuel: fuelCost, cost: cost, net: net, hrs: hrs,
+      perKm: totalKm > 0 ? net / totalKm : null,
+      hourly: hrs > 0 ? net / hrs : null
+    };
+  }
+
+  function render() {
+    var c = calc();
+    var noKm = c.totalKm <= 0;
+    var v = "neutral", t = "填运费和里程";
+
+    if (!noKm && c.freight > 0) {
+      if (c.net <= 0) { v = "bad"; t = "这单倒贴，别跑"; }
+      else if (c.hourly != null && c.hourly >= S.target) { v = "ok"; t = "值得跑"; }
+      else if (c.hourly != null && c.hourly >= S.target * 0.7) { v = "warn"; t = "勉强，看顺不顺路"; }
+      else { v = "bad"; t = "不划算，时薪太低"; }
+    }
+
+    var vd = $("verdict");
+    vd.className = "verdict" + (v === "neutral" ? "" : " " + v);
+    vd.textContent = t;
+
+    $("net").textContent = noKm ? "0" : fmt(c.net, 0);
+    $("bigrow").className = "big" + (c.net < 0 ? " neg" : "");
+    $("perkm").textContent = c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2);
+    $("hourly").textContent = c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0);
+    $("hours").textContent = c.hrs > 0 ? fmt(c.hrs, 1) + "h" : "—";
+
+    var bits = [];
+    if (c.totalKm > 0) bits.push("油费 ¥" + fmt(c.fuel, 0) + "（" + fmt(c.totalKm, 0) + "公里）");
+    if (c.toll > 0) bits.push("过路 ¥" + fmt(c.toll, 0));
+    if (c.other > 0) bits.push("其他 ¥" + fmt(c.other, 0));
+    if (S.fixed > 0) bits.push("固定摊 ¥" + fmt(S.fixed, 0));
+
+    var line = bits.length ? "成本：" + bits.join(" · ") + " ＝¥" + fmt(c.cost, 0) : "";
+    if (c.wait >= 2) {
+      line += (line ? "<br>" : "") + "等了 " + fmt(c.wait, 1) + " 小时，超过 2 小时该跟货主要压车费";
+    }
+    $("brk").innerHTML = line;
+
+    var has = c.totalKm > 0;
+    $("qCost").textContent = has ? "¥" + fmt(c.cost, 0) : "—";
+    $("qBid").textContent = has
+      ? "¥" + fmt(Math.ceil((c.cost + S.target * c.hrs) / 10) * 10, 0)
+      : "—";
+  }
+
+  function dayKey(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+  function monthKey(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + "-" + (d.getMonth() + 1);
+  }
+  function stamp(ts) {
+    var d = new Date(ts), p = function (x) { return x < 10 ? "0" + x : "" + x; };
+    return (d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  function sumOf(list) {
+    var out = { n: list.length, net: 0, km: 0, hrs: 0 };
+    list.forEach(function (o) {
+      out.net += o.net || 0; out.km += o.totalKm || 0; out.hrs += o.hrs || 0;
+    });
+    return out;
+  }
+
+  function renderLedger() {
+    var now = Date.now();
+    var today = orders.filter(function (o) { return dayKey(o.ts) === dayKey(now); });
+    var month = orders.filter(function (o) { return monthKey(o.ts) === monthKey(now); });
+    var st = sumOf(today), sm = sumOf(month);
+
+    $("tToday").textContent = st.n ? st.n + " 单 · ¥" + fmt(st.net, 0) : "还没有";
+    $("tTodayRate").textContent = st.hrs > 0 ? "平均 ¥" + fmt(st.net / st.hrs, 0) + "/时" : "";
+    $("tMonth").textContent = sm.n ? sm.n + " 单 · ¥" + fmt(sm.net, 0) : "还没有";
+    $("tMonthRate").textContent = sm.hrs > 0
+      ? "平均 ¥" + fmt(sm.net / sm.hrs, 0) + "/时 · " + fmt(sm.km, 0) + "公里"
+      : "";
+
+    var box = $("rows");
+    if (!orders.length) {
+      box.innerHTML = '<div class="empty">还没有记录。算完一单点「记下这一单」。</div>';
+      return;
+    }
+    var sorted = orders.slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 60);
+    box.innerHTML = sorted.map(function (o) {
+      var neg = o.net < 0 ? " neg" : "";
+      var rate = o.hourly == null ? "—" : "¥" + fmt(o.hourly, 0) + "/时";
+      var line = "运费 " + fmt(o.freight, 0) + " · " + fmt(o.totalKm, 0) + "公里"
+        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "")
+        + " · " + (o.wait > 0 ? "等 " + fmt(o.wait, 1) + "h" : "不算等待");
+      return '<div class="row">'
+        + '<div class="m">'
+        + '<div class="l1"><span class="' + neg + '">¥' + fmt(o.net, 0) + "</span><em>"
+        + stamp(o.ts) + " · " + rate + "</em></div>"
+        + '<div class="l2">' + line + "</div>"
+        + "</div>"
+        + '<button class="del" data-id="' + o.id + '" aria-label="删除">×</button>'
+        + "</div>";
+    }).join("");
+  }
+
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { el.classList.remove("show"); }, 1500);
+  }
+
+  function saveOrder() {
+    var c = calc();
+    if (c.freight <= 0 || c.totalKm <= 0) { toast("先填运费和里程"); return; }
+    orders.push({
+      id: String(Date.now()) + Math.random().toString(36).slice(2, 6),
+      ts: Date.now(),
+      freight: c.freight, km: c.km, dead: c.dead, wait: c.wait,
+      toll: c.toll, other: c.other, totalKm: c.totalKm,
+      fuel: c.fuel, cost: c.cost, net: c.net, hrs: c.hrs,
+      perKm: c.perKm, hourly: c.hourly
+    });
+    persist();
+    renderLedger();
+    toast("已记下：" + (c.net >= 0 ? "净赚 ¥" + fmt(c.net, 0) : "净亏 ¥" + fmt(-c.net, 0)));
+  }
+
+  function exportCsv() {
+    if (!orders.length) { toast("账本还是空的"); return; }
+    var head = ["时间", "运费", "载货里程", "空驶里程", "装卸小时", "过路费", "其他", "油费", "净赚", "每公里", "时薪"];
+    var rows = orders.slice().sort(function (a, b) { return a.ts - b.ts; }).map(function (o) {
+      var d = new Date(o.ts);
+      return [d.toLocaleString("zh-CN"), o.freight, o.km, o.dead, o.wait, o.toll, o.other,
+        Math.round(o.fuel), Math.round(o.net),
+        o.perKm == null ? "" : o.perKm.toFixed(2),
+        o.hourly == null ? "" : o.hourly.toFixed(0)];
+    });
+    var csv = "\ufeff" + [head].concat(rows).map(function (r) { return r.join(","); }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "接单账本.csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 0);
+    toast("已导出 CSV");
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch];
+    });
+  }
+
+  function renderRoutes() {
+    var box = $("routes");
+    if (!S.routes.length) { box.innerHTML = ""; return; }
+    box.innerHTML = S.routes.map(function (r, i) {
+      return '<span class="chip" data-i="' + i + '">' + esc(r.name) +
+        '<b data-del="' + i + '">×</b></span>';
+    }).join("");
+  }
+
+  function applyRoute(i) {
+    var r = S.routes[i];
+    if (!r) return;
+    ["km", "dead", "wait", "toll", "other"].forEach(function (id) {
+      var el = $(id);
+      el.value = r[id] ? r[id] : "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    toast("已填好 " + r.name + "，填运费就行");
+  }
+
+  $("routes").addEventListener("click", function (e) {
+    var del = e.target.getAttribute && e.target.getAttribute("data-del");
+    if (del !== null && del !== undefined) {
+      S.routes.splice(parseInt(del, 10), 1);
+      persist();
+      renderRoutes();
+      return;
+    }
+    var chip = e.target.closest && e.target.closest(".chip");
+    if (chip) applyRoute(parseInt(chip.getAttribute("data-i"), 10));
+  });
+
+  $("saveRoute").addEventListener("click", function () {
+    if (num($("km").value) <= 0) { toast("先填载货里程"); return; }
+    var raw = window.prompt("给这条线起个名，比如 西安→成都", "");
+    if (raw === null) return;
+    var name = String(raw).trim().slice(0, 12);
+    if (!name) return;
+    S.routes = S.routes.filter(function (r) { return r.name !== name; });
+    S.routes.unshift({
+      name: name, km: num($("km").value), dead: num($("dead").value),
+      wait: num($("wait").value), toll: num($("toll").value), other: num($("other").value)
+    });
+    S.routes = S.routes.slice(0, 8);
+    persist();
+    renderRoutes();
+    toast("已存线路：" + name);
+  });
+
+  function renderCompare() {
+    var list = S.compare;
+    $("cmpCard").hidden = !list.length;
+    $("cmpCount").textContent = list.length ? list.length + " 单，看谁时薪高" : "";
+    if (!list.length) { $("cmpRows").innerHTML = ""; return; }
+    var bestIdx = -1, best = -Infinity;
+    list.forEach(function (o, i) {
+      if (o.hourly != null && o.hourly > best) { best = o.hourly; bestIdx = i; }
+    });
+    $("cmpRows").innerHTML = list.map(function (o, i) {
+      var isBest = list.length > 1 && i === bestIdx;
+      return '<div class="cmp"><div class="m">'
+        + '<div class="l1"><b class="' + (o.net < 0 ? "neg" : "") + '">¥' + fmt(o.net, 0) + "</b>"
+        + "<em>净赚 · " + (o.hourly == null ? "—" : "¥" + fmt(o.hourly, 0) + "/时") + " · "
+        + (o.perKm == null ? "—" : "¥" + fmt(o.perKm, 2) + "/公里") + "</em></div>"
+        + '<div class="l2">运费 ' + fmt(o.freight, 0) + " · " + fmt(o.totalKm, 0) + "公里"
+        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "") + " · 等 " + fmt(o.wait, 1) + "h</div>"
+        + "</div>"
+        + (isBest ? '<span class="best">最赚</span>' : "")
+        + '<button class="del" data-ci="' + i + '">×</button></div>';
+    }).join("");
+  }
+
+  function addCompare() {
+    var c = calc();
+    if (c.freight <= 0 || c.totalKm <= 0) { toast("先填运费和里程"); return; }
+    if (S.compare.length >= 3) { toast("最多对比 3 单，先删一个"); return; }
+    S.compare.push({
+      freight: c.freight, km: c.km, dead: c.dead, wait: c.wait, toll: c.toll, other: c.other,
+      totalKm: c.totalKm, net: c.net, perKm: c.perKm, hourly: c.hourly, hrs: c.hrs
+    });
+    persist();
+    renderCompare();
+    toast("已加入对比，" + S.compare.length + " 单");
+  }
+
+  function renderFuel() {
+    var f = S.fuels, out = $("fuelReal"), use = $("useFuel");
+    use.hidden = true;
+    if (f.length < 2) {
+      out.textContent = f.length
+        ? "已记 1 次（里程 " + fmt(f[0].odo, 0) + "），下次加油再记一次就能算。"
+        : "记两次加油就能算出真实百公里油耗。";
+      return;
+    }
+    var a = f[f.length - 2], b = f[f.length - 1];
+    var dist = b.odo - a.odo, lit = b.liters;
+    if (dist <= 0 || lit <= 0) { out.textContent = "里程比上次小，检查一下读数。"; return; }
+    var real = lit / dist * 100;
+    if (!isFinite(real) || real < 3 || real > 90) {
+      out.textContent = "算出来 " + fmt(real, 1) + " 升/百公里，数字不对，检查里程和升数。";
+      return;
+    }
+    out.innerHTML = "上次加油跑了 " + fmt(dist, 0) + " 公里，这次加 " + fmt(lit, 0) +
+      " 升 ＝ <b>" + fmt(real, 1) + " 升/百公里</b>";
+    use.hidden = false;
+    use.setAttribute("data-v", real.toFixed(1));
+  }
+
+  $("addCmp").addEventListener("click", addCompare);
+  $("cmpClear").addEventListener("click", function () {
+    S.compare = [];
+    persist();
+    renderCompare();
+    toast("对比已清空");
+  });
+  $("cmpRows").addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest(".del");
+    if (!btn) return;
+    S.compare.splice(parseInt(btn.getAttribute("data-ci"), 10), 1);
+    persist();
+    renderCompare();
+  });
+
+  $("addFuel").addEventListener("click", function () {
+    var odo = num($("odo").value), lit = num($("liters").value);
+    if (odo <= 0 || lit <= 0) { toast("填里程表读数和加油升数"); return; }
+    var last = S.fuels[S.fuels.length - 1];
+    if (last && last.odo === odo) {
+      S.fuels[S.fuels.length - 1] = { ts: Date.now(), odo: odo, liters: lit };
+    } else {
+      S.fuels.push({ ts: Date.now(), odo: odo, liters: lit });
+    }
+    S.fuels = S.fuels.slice(-12);
+    $("odo").value = "";
+    $("liters").value = "";
+    persist();
+    renderFuel();
+    toast("已记一次加油");
+  });
+
+  $("useFuel").addEventListener("click", function () {
+    var v = parseFloat(this.getAttribute("data-v"));
+    if (!isFinite(v)) return;
+    S.fuel = v;
+    persist();
+    $("setFuel").value = v;
+    render();
+    toast("油耗改成 " + v + " 升/百公里");
+  });
+
+  // ===== 地图（可选，要用高德 Key）=====
+  var MAP = { map: null, geo: null, driving: null, ac: [], pts: {}, txt: {}, loaded: false };
+
+  function setVal(id, v) {
+    var el = $(id);
+    el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function showSetup(on) {
+    $("mapSetup").hidden = !on;
+    $("mapMain").hidden = on;
+  }
+
+  function loadMap() {
+    if (!S.amapKey) { showSetup(true); return; }
+    if (window.AMap) { initMap(); return; }
+    showSetup(false);
+    $("mapInfo").textContent = "正在加载地图…";
+    window._AMapSecurityConfig = { securityJsCode: S.amapSec || "" };
+    var s = document.createElement("script");
+    s.src = "https://webapi.amap.com/maps?v=2.0&key=" + encodeURIComponent(S.amapKey) +
+      "&plugin=AMap.Driving,AMap.Geolocation,AMap.AutoComplete,AMap.Geocoder";
+    s.onload = function () { MAP.loaded = true; initMap(); };
+    s.onerror = function () {
+      $("mapInfo").textContent = "地图没加载出来：检查网络，或者 Key 是不是填错了。";
+      showSetup(true);
+    };
+    document.head.appendChild(s);
+  }
+
+  function initMap() {
+    if (MAP.map || !window.AMap) return;
+    showSetup(false);
+    try {
+      MAP.map = new window.AMap.Map("mapBox", { zoom: 10, viewMode: "2D" });
+      MAP.geo = new window.AMap.Geolocation({ enableHighAccuracy: true, timeout: 9000 });
+      MAP.map.addControl(MAP.geo);
+      MAP.driving = new window.AMap.Driving({ map: MAP.map, policy: window.AMap.DrivingPolicy.LEAST_TIME });
+      [["locNow", "now"], ["locPick", "pick"], ["locDest", "dest"]].forEach(function (p) {
+        var ac = new window.AMap.AutoComplete({ input: p[0] });
+        ac.on("select", function (e) {
+          var loc = e && e.poi && e.poi.location;
+          if (loc) { MAP.pts[p[1]] = loc; MAP.txt[p[1]] = $(p[0]).value; }
+        });
+        MAP.ac.push(ac);
+      });
+      $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
+      if (MAP.map) MAP.map.resize();
+      // 打开就顺手尝试一次定位，填好「现在的位置」；拿不到就安静地不管
+      if (!$("locNow").value && window.isSecureContext) setTimeout(function () { locate(true); }, 600);
+    } catch (e) {
+      $("mapInfo").textContent = "地图初始化失败：" + (e && e.message ? e.message : e);
+    }
+  }
+
+  function ensurePoint(key, id, cb) {
+    var el = $(id), text = (el.value || "").trim();
+    if (MAP.pts[key] && MAP.txt[key] === text) { cb(); return; }
+    if (!text) { toast("三个地点都填一下"); return; }
+    new window.AMap.Geocoder().getLocation(text, function (status, result) {
+      var g = result && result.geocodes;
+      if (status === "complete" && g && g.length && g[0].location) {
+        MAP.pts[key] = g[0].location;
+        MAP.txt[key] = text;
+        cb();
+      } else {
+        toast("没找到「" + text.slice(0, 8) + "」，在输入提示里点一条试试");
+      }
+    });
+  }
+
+  function dur(sec) {
+    var m = Math.round((sec || 0) / 60);
+    if (m < 60) return m + " 分钟";
+    return Math.floor(m / 60) + " 小时" + (m % 60 ? " " + (m % 60) + " 分" : "");
+  }
+
+  function applyRoute(a, b) {
+    var deadKm = Math.round(a.distance / 1000);
+    var km = Math.round(b.distance / 1000);
+    var toll = Math.round((a.tolls || 0) + (b.tolls || 0));
+    setVal("dead", deadKm);
+    setVal("km", km);
+    setVal("toll", toll);
+    render();
+    $("mapInfo").innerHTML = "空驶 <b>" + deadKm + " 公里</b>（约 " + dur(a.time) +
+      "）· 载货 <b>" + km + " 公里</b>（约 " + dur(b.time) +
+      "）· 过路费 <b>¥" + toll + "</b>，已经填进上面。<br />" +
+      "注意：高德是按小客车算的，跑起来比它慢，过路费货车按轴收也更高——" +
+      "平均时速还是按你自己的 " + S.speed + "，过路费要往上加点就自己改。";
+    toast("公里数和过路费填好了");
+    try { $("freight").focus(); } catch (e) {}
+  }
+
+  // 算一段路线；失败自动再试一次（手机网抖一下很常见），还不行就把高德给的原因说出来
+  function driveOnce(a, b, cb) {
+    var tries = 0;
+    (function attempt() {
+      var ok = false;
+      try {
+        MAP.driving.search(a, b, function (st, res) {
+          var r = st === "complete" && res && res.routes && res.routes[0];
+          if (r) { ok = true; cb(null, r); return; }
+          var why = (res && (res.info || res.infocode)) || st || "未知原因";
+          if (tries++ < 1) { setTimeout(attempt, 900); return; }
+          cb(String(why));
+        });
+      } catch (e) {
+        if (tries++ < 1) { setTimeout(attempt, 900); return; }
+        cb("页面报错：" + (e && e.message ? e.message : e));
+      }
+    })();
+  }
+
+  function runRoute() {
+    var p = MAP.pts;
+    $("mapInfo").textContent = "在算路线，稍等…";
+    driveOnce(p.now, p.pick, function (e1, r1) {
+      if (!r1) {
+        $("mapInfo").innerHTML = "现在到取货地这段没算出来。" +
+          "<br />高德说的原因：<b>" + esc(e1) + "</b>" +
+          "<br />多数是网慢或者地点写得太笼统。等一下再点一次；" +
+          "或者把地点改得具体点（加个区、路名），也可以先在地图上点一下定位。";
+        return;
+      }
+      driveOnce(p.pick, p.dest, function (e2, r2) {
+        if (!r2) {
+          $("mapInfo").innerHTML = "取货地到目的地这段没算出来。" +
+            "<br />高德说的原因：<b>" + esc(e2) + "</b>" +
+            "<br />同样，等一下再点一次；地点越具体越好（比如「广州白云区物流园」比「广州站」好找）。";
+          return;
+        }
+        applyRoute(r1, r2);
+      });
+    });
+  }
+
+  $("btnKey").addEventListener("click", function () {
+    var k = ($("amapKey").value || "").trim();
+    if (!k) { toast("先把 Key 填上"); return; }
+    S.amapKey = k;
+    S.amapSec = ($("amapSec").value || "").trim();
+    persist();
+    loadMap();
+  });
+
+  $("btnKeyReset").addEventListener("click", function () {
+    showSetup(true);
+    $("amapKey").value = S.amapKey || "";
+    $("amapSec").value = S.amapSec || "";
+  });
+
+  $("btnGeo").addEventListener("click", function () { locate(false); });
+
+  function locate(silent) {
+    if (!MAP.geo) { if (!silent) toast("地图还没加载好"); return; }
+    $("mapInfo").textContent = "在定位…";
+    MAP.geo.getCurrentPosition(function (status, res) {
+      var pos = res && res.position;
+      if (status === "complete" && pos) {
+        MAP.pts.now = pos;
+        var shown = "当前位置 " + pos.lng.toFixed(4) + ", " + pos.lat.toFixed(4);
+        $("locNow").value = shown;
+        MAP.txt.now = shown;
+        $("mapInfo").textContent = "定位成功，接着填取货地和目的地。";
+        new window.AMap.Geocoder().getAddress(pos, function (st, r) {
+          var a = st === "complete" && r && r.regeocode && r.regeocode.formattedAddress;
+          if (a) {
+            $("locNow").value = a;
+            MAP.txt.now = a;
+          }
+        });
+      } else if (!silent) {
+        $("mapInfo").textContent = window.isSecureContext
+          ? "定位失败：手机设置里给这个浏览器开「位置」权限，再点一次；还是不行就手动填个大概名字（比如「萧山区」）。"
+          : "定位失败：这个页面不是 https 打开的，浏览器不给位置。用我发的那个 https 网址打开就能定位，或者手动填地点。";
+      } else {
+        $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
+      }
+    });
+  }
+
+  $("btnRoute").addEventListener("click", function () {
+    if (!MAP.map) { toast("先把 Key 保存，让地图加载出来"); return; }
+    ensurePoint("now", "locNow", function () {
+      ensurePoint("pick", "locPick", function () {
+        ensurePoint("dest", "locDest", function () { runRoute(); });
+      });
+    });
+  });
+
+  var mapCard = $("mapCard");
+  mapCard.addEventListener("toggle", function () {
+    S.mapOpen = mapCard.open;
+    persist();
+    if (!mapCard.open) return;
+    if (!MAP.map && S.amapKey) { loadMap(); return; }
+    if (MAP.map) setTimeout(function () { MAP.map.resize(); }, 80);
+  });
+
+  $("amapKey").value = S.amapKey || "";
+  $("amapSec").value = S.amapSec || "";
+  showSetup(!S.amapKey);
+  // 地图脚本等真的展开这张卡再去加载，不展开就不联网
+  // 第一次打开就把地图卡展开（上次手动收起来了才保持收起）
+  if (S.amapKey && S.mapOpen !== false) mapCard.open = true;
+  if (S.amapKey && mapCard.open) loadMap();
+
+  // 设置区绑定
+  var map = { setFuel: "fuel", setPrice: "price", setSpeed: "speed", setTarget: "target", setFixed: "fixed" };
+  Object.keys(map).forEach(function (id) {
+    var el = $(id);
+    el.value = S[map[id]];
+    el.addEventListener("change", function () {
+      var v = parseFloat(el.value);
+      S[map[id]] = isFinite(v) && v >= 0 ? v : DEFAULTS[map[id]];
+      if (map[id] === "speed" && S.speed <= 0) S.speed = DEFAULTS.speed;
+      el.value = S[map[id]];
+      persist();
+      render();
+    });
+  });
+
+  ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
+    $(id).addEventListener("input", function () { render(); rememberInputs(); });
+  });
+  function rememberInputs() {
+    S.last = {
+      freight: $("freight").value, km: $("km").value, dead: $("dead").value,
+      wait: $("wait").value, toll: $("toll").value, other: $("other").value
+    };
+    persist();
+  }
+  if (S.last && typeof S.last === "object") {
+    ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
+      if (S.last[id] != null && S.last[id] !== "") $(id).value = S.last[id];
+    });
+  }
+
+  $("save").addEventListener("click", saveOrder);
+  $("export").addEventListener("click", exportCsv);
+
+  $("rows").addEventListener("click", function (e) {
+    var btn = e.target.closest(".del");
+    if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    orders = orders.filter(function (o) { return o.id !== id; });
+    persist();
+    renderLedger();
+    toast("已删除");
+  });
+
+  renderRoutes();
+  renderCompare();
+  renderFuel();
+  render();
+  renderLedger();
+})();
+</script>
+
+<pre id="selftest" style="font:12px monospace;white-space:pre-wrap;padding:8px"></pre>
+<script>
+(function(){
+  var out=document.getElementById("selftest");
+  function log(t){ out.textContent += t + "\n"; }
+  function fire(id,v){ var e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event("input",{bubbles:true})); }
+  setTimeout(function(){
+    var n=0;
+    var iv=setInterval(function(){
+      n++;
+      var info=(document.getElementById("mapInfo")||{}).textContent||"";
+      var ready = window.AMap && document.querySelector("#mapBox canvas");
+      if(n>60){ clearInterval(iv); log("TIMEOUT info="+info+" amap="+(typeof window.AMap)); return; }
+      if(!ready) return;
+      clearInterval(iv);
+      log("ready info="+info);
+      fire("locNow","辽宁省大连市甘井子区凌水街道");
+      fire("locPick","景县董子公园");
+      fire("locDest","广州站");
+      document.getElementById("btnRoute").click();
+      var t0=Date.now();
+      var iv2=setInterval(function(){
+        var i2=(document.getElementById("mapInfo").textContent||"");
+        if(/公里/.test(i2) || /没算出来/.test(i2) || Date.now()-t0>45000){
+          clearInterval(iv2);
+          log("result="+i2);
+          log("dead="+document.getElementById("dead").value+
+              " km="+document.getElementById("km").value+
+              " toll="+document.getElementById("toll").value+
+              " net="+(document.querySelector(".result .big b")||{}).textContent);
+          log("DONE");
+        }
+      },500);
+    },500);
+  },2000);
+})();
+</script>
+</body>
+</html>
