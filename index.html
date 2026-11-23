@@ -249,6 +249,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
       </div>
       <div class="tip" id="mapInfo" style="margin-top:8px">正在准备地图…</div>
       <div id="mapBox"></div>
+      <!-- 地图单独的结果卡：跟上面「粘贴算账」完全分开，互不覆盖 -->
+      <div class="result mapres" id="mapResult" style="margin-top:10px" hidden>
+        <div class="verdict" id="qmVerdict">—</div>
+        <div class="big" id="qmBigRow"><span class="cur">¥</span><span class="n" id="qmNet">0</span><span class="unit">这趟按地图算净赚</span></div>
+        <div class="stats">
+          <div><b id="qmHourly">—</b><i>每小时净赚</i></div>
+          <div><b id="qmPerKm">—</b><i>每公里净赚</i></div>
+          <div><b id="qmHours">—</b><i>预计用时</i></div>
+        </div>
+        <div class="brk" id="qmBreak">——</div>
+      </div>
       <button class="linkbtn" id="btnMapReload" type="button" hidden>重新加载地图</button>
     </div>
   </section>
