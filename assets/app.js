@@ -660,6 +660,54 @@
       sink.value = ""; $("pasteResult").hidden = true; $("pasteResult").innerHTML = "";
     };
 
+    // —— 🎤 语音说一单：按一下，对着手机念，自动识别成文字再算账
+    (function () {
+      var vb = $("voiceBtn");
+      if (!vb) return;
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { vb.style.display = "none"; return; } // 浏览器不支持就藏起来，不碍眼
+      var rec = null, listening = false;
+      vb.onclick = function () {
+        if (listening) { try { rec && rec.stop(); } catch (e) {} return; }
+        try {
+          rec = new SR();
+          rec.lang = "zh-CN";
+          rec.interimResults = true;
+          rec.maxAlternatives = 1;
+          rec.continuous = false;
+          var finalText = "";
+          rec.onstart = function () {
+            listening = true;
+            vb.classList.add("listening");
+            vb.textContent = "🎤 正在听…念完松开/等一下就好";
+          };
+          rec.onresult = function (e) {
+            var t = "";
+            for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+            finalText = t;
+            sink.value = t; // 边说边显示
+          };
+          rec.onerror = function (ev) {
+            var m = (ev && ev.error === "not-allowed") ? "没给麦克风权限：到浏览器设置里允许一下，或直接打字"
+              : "没听清，再点一次按钮说一遍";
+            toast(m);
+          };
+          rec.onend = function () {
+            listening = false;
+            vb.classList.remove("listening");
+            vb.textContent = "🎤 说一单（懒得打字就按这个，对着手机念）";
+            if (finalText && finalText.trim()) {
+              var box = sink.closest(".pastebox"); if (box) box.hidden = false;
+              handlePaste(finalText.trim());
+            }
+          };
+          rec.start();
+        } catch (err) {
+          toast("这个浏览器开不了语音，直接用输入法的麦克风也行");
+        }
+      };
+    })();
+
     // —— 速算输入（只影响上面粘贴算账，不影响地图那块）
     ["qpFreight", "qpKm", "qpDead", "qpWait", "qpToll", "qpFrom", "qpTo", "qpCargo"].forEach(function (id) {
       $(id).addEventListener("input", function () { renderQuick(); });
