@@ -27,6 +27,13 @@
 
   var PLAT_NAME_RE = /滴滴货运|滴滴出行|货拉拉|运满满|货车帮|满帮|快狗打车|快狗|58速运|省省回头车|省省|货源宝|货运宝|运车管家|铁牛|运力帮/g;
 
+  // 判断一行是不是"平台名行"（可带 · 货源详情 之类的后缀，如「货车帮 · 货源详情」）
+  var PLAT_LINE_RE = /^(?:滴滴货运|滴滴出行|货拉拉|运满满|货车帮|满帮|快狗打车|快狗打车|58速运|省省回头车|省省|货源宝|货运宝|运车管家|铁牛|运力帮)(?:[\s·•|／\/\-—]*.{0,14})?$/;
+  function isPlatLine(s) { return PLAT_LINE_RE.test(String(s || "").trim()); }
+  // 判断一行是不是"起点/装货地"标签行（新一轮卡片开始的强信号）
+  var FROM_LINE_RE = /^(?:装货地(?:址|点)?|装货点|取货地(?:址)?|取货点|起点|出发地|发货地|提货地|起运地|始发地)\s*[：:]/;
+  function isFromLine(s) { return FROM_LINE_RE.test(String(s || "").trim()); }
+
   function clean(s) {
     return String(s == null ? "" : s)
       .replace(/\u00a0|\u3000/g, " ")
@@ -207,13 +214,22 @@
 
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
+
+      // 【强切分①】平台名行（货拉拉 / 运满满 / 快狗打车 / 货车帮 · 货源详情 …）
+      //   只要当前已经有内容，就另起一单。平台名行本身不进数据。
+      if (isPlatLine(line)) { push(); continue; }
+
       // 噪音行
-      if (/^(?:—+|--+|\*+|·{2,}|\d+\/\d+|展开|收起|查看详情|立即联系|电话联系|抢单|已实名|保证金|货拉拉|运满满|满帮|货车帮|快狗打车|省省回头车|滴滴货运|货运)[:：]?$/.test(line)) continue;
+      if (/^(?:—+|--+|\*+|·{2,}|\d+\/\d+|展开|收起|查看详情|立即联系|电话联系|抢单|已实名|保证金)[:：]?$/.test(line)) continue;
       if (/^(?:识别到|这是|以下是|为您找到|附近|推荐)/.test(line)) continue;
 
       var tag = tagLine(line);
 
-      // 遇到"有新运费"且当前单已有运费 → 切单
+      // 【强切分②】起点/装货地标签行：若当前单已经有"实质内容"（有运费或已有起终点），
+      //   说明这是下一张卡片的开头，先收掉上一单，避免上一单的目的地被下一单的装货地覆盖。
+      if (isFromLine(line) && cur && (cur.freight > 0 || (cur.from && cur.to))) push();
+
+      // 【切分③】遇到"有新运费"且当前单已有运费 → 切单（保留原有规则，兼容无平台名的连贴）
       if (tag.f.freight > 0 && cur && cur.freight > 0) push();
       if (!cur) cur = newOrder();
 
