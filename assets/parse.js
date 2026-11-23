@@ -96,6 +96,26 @@
     return !s || LABEL_WORDS.test(s) || NOT_PLACE_WORDS.test(s) || /^【/.test(s);
   }
 
+  // 卡片里地名常写成「文山 广南」（省 市，用空格隔开），或后面拖一串「保 运费 电议 · 整车 行业货」
+  var SIDE_STOP = /^(?:保|保运费|运费|电议|整车|零担|行业货|拼车|包车|去抢单|去接单|抢单|装货|卸货|一装一卸|提货|送货|冷藏|高栏|平板|厢式|车|吨|方|新货|播报)$/;
+  function pickSide(s) {
+    s = clean(s).replace(/[·•|\/\\]/g, " ").replace(/\s{2,}/g, " ").trim();
+    if (!s) return "";
+    PLACE_RE.lastIndex = 0;
+    if (PLACE_RE.test(s)) { PLACE_RE.lastIndex = 0; return pickPlace(s); }
+    PLACE_RE.lastIndex = 0;
+    var toks = s.split(/\s+/).filter(Boolean);
+    var acc = [];
+    for (var i = 0; i < toks.length; i++) {
+      var tk = toks[i];
+      if (SIDE_STOP.test(tk)) break;
+      if (/[等时点小分钟装货卸吨元块里公里|·]/.test(tk)) break;
+      if (/^[\u4e00-\u9fa5]{2,4}$/.test(tk) && !isLabel(tk)) acc.push(tk);
+      else break;
+    }
+    return acc.join("");
+  }
+
   function splitRoute(line) {
     if (!line) return null;
     var fi = line.search(FROM_LABEL_RE);
@@ -116,7 +136,7 @@
         return y || x;
       });
       var first = segs[0], last = segs[segs.length - 1];
-      var a = pickPlace(first), b = pickPlace(last);
+      var a = pickSide(first) || pickPlace(first), b = pickSide(last) || pickPlace(last);
       if (isLabel(a)) a = "";
       if (isLabel(b)) b = "";
       // 左边是招呼语时，从左往右找第一个真地名
@@ -145,6 +165,11 @@
   /* -------- 单行打标签：返回 {fields, restLine} -------- */
   var P = {
     toll: /(?:过路费|高速费|路桥费|过桥费|过路)\s*[：:]?\s*[¥￥]?\s*([\d,]+(?:\.\d+)?)/,
+    // 运满满/货车帮 找货助手卡片：单价按吨/按趟
+    pricePerTon: /([\d,]+(?:\.\d+)?)\s*元?\s*\/\s*(?:吨|t)(?![a-z])/i,
+    pricePerTrip: /([\d,]+(?:\.\d+)?)\s*元?\s*\/\s*(?:趟|车|单)/,
+    // "约52km装货" = 装货地离你的距离（空驶），不是全程里程
+    deadLoad: /约?\s*([\d.]+)\s*(?:km|公里)\s*装货/i,
     dead: /(?:空驶|空跑|放空|回程空驶|空车)\s*[：:约]*\s*([\d.]+)\s*(?:公里|千米|km|KM)?/,
     dead2: /(?:距离你|距你|距离我|离你|距离约)\s*[：:约]*\s*([\d.]+)\s*(?:公里|千米|km|KM)/,
     wait: /(?:等(?:待|候)?|排队|压车)\s*[：:约]*\s*([\d.]+)\s*(?:个)?\s*(?:小时|钟头|h|H)/,
@@ -154,6 +179,7 @@
     price3: /([\d,]{2,}(?:\.\d+)?)\s*(?:元|块钱)/,
     km: /(?:全程|总里程|里程|距离|公里数|路程|行驶)\s*[：:约]?\s*(?:约|大约|大概)?\s*([\d.]+)\s*(?:公里|千米|km|KM|Km)?/,
     km2: /([\d.]+)\s*(?:公里|千米|km|KM|Km)(?!\s*\/(?:小时|h))/,
+    weightRange: /(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*(?:吨|t|T)/,
     weight: /([\d.]+)\s*(吨|t|T|方|立方|m³|m3)/,
     phone: /(1[3-9]\d{9})/,
     time: /(?:装货时间|装车时间|用车时间|发车时间|发货时间|装货日期)\s*[：:]?\s*([^\s，,。；;]{2,26})/,
@@ -173,6 +199,11 @@
       return true;
     }
     take(P.toll, "toll", function (m) { return money(m[1]); });
+    // 先认「元/吨」「元/趟」——否则 400元/吨 会被 price3 当成整单运费 400
+    take(P.pricePerTon, "pricePerTon", function (m) { return money(m[1]); });
+    take(P.pricePerTrip, "freight", function (m) { return money(m[1]); });
+    // 「约52km装货」先当空驶拿走，别让 km2 把它当全程里程
+    take(P.deadLoad, "dead", function (m) { return parseFloat(m[1]); });
     take(P.dead, "dead", function (m) { return parseFloat(m[1]); }) || take(P.dead2, "dead", function (m) { return parseFloat(m[1]); });
     take(P.price, "freight", function (m) { return money(m[1]); }) ||
       take(P.price2, "freight", function (m) { return money(m[1]); }) ||
@@ -182,7 +213,41 @@
     take(GOODS_LABEL_RE, "goods", function (m) { return clean(m[1]); });
     take(CARGO_LABEL_RE, "cargo", function (m) { return clean(m[1]); });
     if (!f.cargo) take(CARGO_RE, "cargo", function (m) { return clean(m[1]); });
-    take(P.weight, "weight", function (m) { return clean(m[1] + m[2]); });
+    // "13米 | 高栏" 这种：把车型补到车长后面，变成 13米高栏
+    if (f.cargo && /^\d+(?:\.\d+)?\s*米$/.test(f.cargo)) {
+      var cm = t.match(/(?:高栏|厢式|平板|冷藏|保温|厢货|半挂|挂车|依维柯|货车)/);
+      if (cm) { f.cargo += cm[0]; t = t.replace(cm[0], " "); }
+    }
+    // 吨位区间 30-33吨：先记区间，再兜底单吨位
+    if (take(P.weightRange, "weightRange", function (m) { return parseFloat(m[1]) + "-" + parseFloat(m[2]); })) {
+      var wr = String(f.weightRange).split("-");
+      f.tonLo = parseFloat(wr[0]); f.tonHi = parseFloat(wr[1]);
+      f.weight = wr[0] + "-" + wr[1] + "吨";
+    } else {
+      take(P.weight, "weight", function (m) { return clean(m[1] + m[2]); });
+    }
+    // 卡片式（找货助手）货名没有"货物名称："标签：车长/吨位拿走后，
+    // 剩下"生姜 纸箱 明天装货"里 装货/时间 前面那串就是货名。
+    // 只在"含装货时间、且不是线路行"的行上认，避免把起终点当货名。
+    if (!f.goods && !/[→➡⇒>]|至|到/.test(line) && /(?:装货|装车|卸货|一装一卸|明天|今天|后天|随时|现在)/.test(line)) {
+      var gtoks = t.trim().split(/\s+/);
+      var GBAD = /[装卸明今后时月日点\d吨方元块公里]/;
+      var GSKIP = /^(?:保|保运费|运费|电议|整车|零担|行业货|拼车|包车|高栏|平板|厢式|冷藏|保温|厢货|半挂|挂车|车|货|米)$/;
+      var gstart = -1;
+      for (var gi = 0; gi < gtoks.length; gi++) {
+        var gk = gtoks[gi];
+        if (/^[\u4e00-\u9fa5]{1,6}$/.test(gk) && !GBAD.test(gk) && !GSKIP.test(gk)) { gstart = gi; break; }
+      }
+      if (gstart >= 0) {
+        var gacc = [];
+        for (var gj = gstart; gj < gtoks.length && gacc.length < 3; gj++) {
+          var gk2 = gtoks[gj];
+          if (/^[\u4e00-\u9fa5]{1,6}$/.test(gk2) && !GBAD.test(gk2) && !GSKIP.test(gk2)) gacc.push(gk2);
+          else break;
+        }
+        if (gacc.length) { f.goods = gacc.join(" "); t = t.replace(gacc.join(" "), " "); }
+      }
+    }
     take(P.phone, "phone", function (m) { return m[1]; });
     if (!take(P.time, "loadTime", function (m) { return clean(m[1]); })) {
       take(P.time2, "loadTime", function (m) { return clean(m[1] + (m[2] ? " " + m[2] : "")); }) ||
@@ -207,10 +272,14 @@
     function newOrder() {
       return {
         from: "", to: "", freight: 0, km: 0, dead: 0, wait: 0, toll: 0,
-        cargo: "", goods: "", weight: "", loadTime: "", phone: "", rawLines: []
+        cargo: "", goods: "", weight: "", loadTime: "", phone: "", rawLines: [],
+        pricePerTon: 0, tonLo: 0, tonHi: 0
       };
     }
     function push() { if (cur && (cur.freight > 0 || (cur.from && cur.to))) out.push(cur); cur = null; }
+    function hasContent(o) {
+      return !!o && (o.from && o.to) && (o.freight > 0 || o.pricePerTon > 0 || o.km > 0 || o.dead > 0 || o.cargo || o.goods);
+    }
 
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
@@ -220,10 +289,15 @@
       if (isPlatLine(line)) { push(); continue; }
 
       // 噪音行
-      if (/^(?:—+|--+|\*+|·{2,}|\d+\/\d+|展开|收起|查看详情|立即联系|电话联系|抢单|已实名|保证金)[:：]?$/.test(line)) continue;
-      if (/^(?:识别到|这是|以下是|为您找到|附近|推荐)/.test(line)) continue;
+      if (/^(?:—+|--+|\*+|·{2,}|\d+\/\d+|展开|收起|查看详情|立即联系|电话联系|抢单|去抢单|去接单|立即抢单|已实名|保证金)[:：]?$/.test(line)) continue;
+      if (/^(?:识别到|这是|以下是|为您找到|附近|推荐|找货助手|新货|播报|优先找|订阅线路)/.test(line)) continue;
 
       var tag = tagLine(line);
+
+      // 【强切分⓪】"找货助手"卡片：线路行（A → B）就是每张卡片的第一行。
+      //   当前单已经有内容（起终点+实质信息）时，再来一行完整线路 = 新的一单。
+      var rPre = splitRoute(tag.rest) || splitRoute(line);
+      if (rPre && rPre.from && rPre.to && hasContent(cur)) push();
 
       // 【强切分②】起点/装货地标签行：若当前单已经有"实质内容"（有运费或已有起终点），
       //   说明这是下一张卡片的开头，先收掉上一单，避免上一单的目的地被下一单的装货地覆盖。
@@ -264,6 +338,11 @@
 
     // 收尾清理
     return out.map(function (o) {
+      // 「X元/吨」卡片：总运费 = 单价 × 吨位（取区间上限；司机按实际装载可再改）
+      if (!o.freight && o.pricePerTon > 0) {
+        var ton = o.tonHi || o.tonLo || parseFloat(String(o.weight).replace(/[^\d.]/g, "")) || 0;
+        o.freight = ton > 0 ? Math.round(o.pricePerTon * ton) : Math.round(o.pricePerTon);
+      }
       if (o.from && o.to && o.from === o.to) o.to = "";
       if (!o.from && o.to) { o.from = o.to; o.to = ""; }
       return o;
