@@ -273,14 +273,17 @@
     var deadKm = Math.round(a.distance / 1000);
     var km = Math.round(b.distance / 1000);
     var toll = Math.round((a.tolls || 0) + (b.tolls || 0));
-    var fill = window.TruckApp && window.TruckApp.fillRoute ? window.TruckApp.fillRoute : null;
-    if (fill) fill({ dead: deadKm, km: km, toll: toll });
+
+    // 关键：地图算出来的结果只放到「地图结果卡」里单独显示，
+    // 绝不写进上面「粘贴算账」那套字段——两个功能彻底分开，互不覆盖。
+    var show = window.TruckApp && window.TruckApp.showMapResult ? window.TruckApp.showMapResult : null;
+    if (show) show({ dead: deadKm, km: km, toll: toll });
 
     info("空驶 <b>" + deadKm + " 公里</b>（约 " + dur(a.time) +
       "）· 载货 <b>" + km + " 公里</b>（约 " + dur(b.time) +
-      "）· 过路费 <b>¥" + toll + "</b>，已经填到「算账」里了。<br />" +
-      "注意：高德按小客车算，货车跑得慢、过路费按轴收更高——时速还是用你自己的，过路费要加就自己改。");
-    toast("公里数和过路费填好了");
+      "）· 过路费 <b>¥" + toll + "</b>，已经算在下面的「地图结果」里了。<br />" +
+      "注意：高德按小客车算，货车跑得慢、过路费按轴收更高——时速还是按你自己的算，过路费要加可以在地图结果里改。");
+    toast("路线算好了，看下面地图结果");
   }
 
   function runRoute() {
