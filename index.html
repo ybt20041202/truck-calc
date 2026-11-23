@@ -169,7 +169,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div class="topbar">
     <div>
-      <h1>货运接单快算 <span class="ver">v8-粘贴直读-定位算里程</span></h1>
+      <h1>货运接单快算 <span class="ver">v9-两块独立算</span></h1>
       <div class="sub">App 里复制一单 → 这里一贴 → 挣多少、该报多少，全出来</div>
     </div>
   </div>
@@ -249,6 +249,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
       </div>
       <div class="tip" id="mapInfo" style="margin-top:8px">正在准备地图…</div>
       <div id="mapBox"></div>
+      <!-- 地图这块自己的运费/等待，不跟上面速算表单共用 -->
+      <div class="grid2" style="margin-top:10px">
+        <label class="f"><span>这趟运费（元）</span><input id="qmFreight" type="number" inputmode="decimal" placeholder="这单给多少钱" /></label>
+        <label class="f"><span>装卸等待（小时）</span><input id="qmWait" type="number" inputmode="decimal" placeholder="0" /></label>
+      </div>
       <!-- 地图单独的结果卡：跟上面「粘贴算账」完全分开，互不覆盖 -->
       <div class="result mapres" id="mapResult" style="margin-top:10px" hidden>
         <div class="verdict" id="qmVerdict">—</div>
@@ -373,8 +378,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div id="toast"></div>
 </div>
-<script src="assets/parse.js?v=8"></script>
-<script src="assets/map.js?v=8"></script>
-<script src="assets/app.js?v=8"></script>
+<script src="assets/parse.js?v=9"></script>
+<script src="assets/map.js?v=9"></script>
+<script src="assets/app.js?v=9"></script>
 </body>
 </html>
