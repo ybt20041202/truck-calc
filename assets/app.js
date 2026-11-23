@@ -531,8 +531,8 @@
     return changed;
   }
 
-  /* v7.1：地图结果单独算、单独显示——只用地图给的 dead/km/toll + 上面表单里的运费，
-     不影响、也不读取「粘贴算账」那套的起终点和里程。两个功能互不覆盖。 */
+  /* v8：地图结果完全独立算——地图给 dead/km/toll，运费/等待用地图块自己的输入框
+     （#qmFreight / #qmWait），不再读上面「粘贴算账」的运费，两个功能彻底分开。 */
   function showMapResult(r) {
     mapLast = {
       dead: r.dead || 0, km: r.km || 0, toll: r.toll || 0,
@@ -548,28 +548,38 @@
   function renderMapResult() {
     var box = $("mapResult");
     if (!box || !mapLast) return;
-    // 运费沿用「粘贴算账」表单里的运费（地图本身不产运费）；其余用地图量出来的
+    // 运费、等待都取地图块自己的输入框，绝不共用上面的速算表单
+    var fr = num($("qmFreight") ? $("qmFreight").value : 0);
     var o = {
       from: mapLast.from, to: mapLast.to,
-      freight: num($("qpFreight").value),
+      freight: fr,
       km: mapLast.km, dead: mapLast.dead, toll: mapLast.toll,
-      wait: num($("qpWait").value), cargo: "", rawLines: []
+      wait: num($("qmWait") ? $("qmWait").value : 0), cargo: "", rawLines: []
     };
     var c = calc(o);
-    var v = verdictOf(c);
-    var vd = $("qmVerdict");
-    if (vd) { vd.className = "verdict" + (v.cls ? " " + v.cls : ""); vd.textContent = v.text; }
-    if ($("qmNet")) $("qmNet").textContent = c.freight ? fmt(c.net, 0) : "0";
-    if ($("qmBigRow")) $("qmBigRow").className = "big" + (c.net < 0 ? " neg" : "");
-    if ($("qmHourly")) $("qmHourly").textContent = c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0);
-    if ($("qmPerKm")) $("qmPerKm").textContent = c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2);
-    if ($("qmHours")) $("qmHours").textContent = c.hrs > 0 ? fmt(c.hrs, 1) + "h" : "—";
     var bits = [];
     if (c.totalDriven > 0) bits.push("跑 " + fmt(c.totalDriven, 0) + " 公里" + (c.back ? "（含返程）" : ""));
     if (c.fuel > 0) bits.push("油钱 ¥" + fmt(c.fuel, 0));
     if (c.toll > 0) bits.push("过路 ¥" + fmt(c.toll, 0));
     if (c.wait > 0) bits.push("等 " + fmt(c.wait, 1) + " 小时");
     if ($("qmBreak")) $("qmBreak").textContent = bits.join("　·　") || "——";
+    if ($("qmHours")) $("qmHours").textContent = c.hrs > 0 ? fmt(c.hrs, 1) + "h" : "—";
+    if (!fr) {   // 还没填运费：只给里程/成本，不瞎算净赚
+      var vd0 = $("qmVerdict");
+      if (vd0) { vd0.className = "verdict"; vd0.textContent = "填上「这趟运费」就算净赚"; }
+      if ($("qmNet")) $("qmNet").textContent = "—";
+      if ($("qmBigRow")) $("qmBigRow").className = "big";
+      if ($("qmHourly")) $("qmHourly").textContent = "—";
+      if ($("qmPerKm")) $("qmPerKm").textContent = "—";
+      return;
+    }
+    var v = verdictOf(c);
+    var vd = $("qmVerdict");
+    if (vd) { vd.className = "verdict" + (v.cls ? " " + v.cls : ""); vd.textContent = v.text; }
+    if ($("qmNet")) $("qmNet").textContent = fmt(c.net, 0);
+    if ($("qmBigRow")) $("qmBigRow").className = "big" + (c.net < 0 ? " neg" : "");
+    if ($("qmHourly")) $("qmHourly").textContent = c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0);
+    if ($("qmPerKm")) $("qmPerKm").textContent = c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2);
   }
 
   /* =========================================================
@@ -650,9 +660,13 @@
       sink.value = ""; $("pasteResult").hidden = true; $("pasteResult").innerHTML = "";
     };
 
-    // —— 速算输入
+    // —— 速算输入（只影响上面粘贴算账，不影响地图那块）
     ["qpFreight", "qpKm", "qpDead", "qpWait", "qpToll", "qpFrom", "qpTo", "qpCargo"].forEach(function (id) {
-      $(id).addEventListener("input", function () { renderQuick(); renderMapResult(); });
+      $(id).addEventListener("input", function () { renderQuick(); });
+    });
+    // —— 地图块自己的运费/等待输入（只重算地图结果卡）
+    ["qmFreight", "qmWait"].forEach(function (id) {
+      if ($(id)) $(id).addEventListener("input", function () { renderMapResult(); });
     });
     $("qComeBack").checked = !!S.comeBack;
     $("qComeBack").onchange = function () {
