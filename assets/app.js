@@ -32,6 +32,7 @@
   var ledger = [];     // 记下的单（跑完的真实收入）
   var cur = null;      // 当前正在算的单（parse 结果）
   var lastBid = 0;
+  var mapLast = null;  // 地图单独算的那份（起点/终点/空驶/里程/过路），跟粘贴那套互不影响
 
   function assign(t) {
     for (var i = 1; i < arguments.length; i++) {
@@ -346,7 +347,9 @@
     o.ts = Date.now();
     o.hits = 1;
     if (!o.source) {
-      var plat = TP.guessPlatform ? TP.guessPlatform(o.rawText || "", o.rawLines)
+      // 用"这单自己的行"判断来源，别整段贴文都算（否则连贴多单全被第一单的平台名带走）
+      var ownText = (o.rawLines && o.rawLines.length) ? o.rawLines.join("\n") : (o.rawText || "");
+      var plat = TP.guessPlatform ? TP.guessPlatform(ownText, o.rawLines)
         : (TP.detectPlatform ? TP.detectPlatform(o.rawLines) : null);
       o.source = plat ? plat.name : "粘贴";
     }
@@ -528,6 +531,47 @@
     return changed;
   }
 
+  /* v7.1：地图结果单独算、单独显示——只用地图给的 dead/km/toll + 上面表单里的运费，
+     不影响、也不读取「粘贴算账」那套的起终点和里程。两个功能互不覆盖。 */
+  function showMapResult(r) {
+    mapLast = {
+      dead: r.dead || 0, km: r.km || 0, toll: r.toll || 0,
+      from: ($("locPick").value || "").trim(),
+      to: ($("locDest").value || "").trim()
+    };
+    var box = $("mapResult");
+    if (box) box.hidden = false;   // 先显示出来，renderMapResult 里才不会被 hidden 挡住
+    renderMapResult();
+    if (box) { try { box.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (e) {} }
+  }
+
+  function renderMapResult() {
+    var box = $("mapResult");
+    if (!box || !mapLast) return;
+    // 运费沿用「粘贴算账」表单里的运费（地图本身不产运费）；其余用地图量出来的
+    var o = {
+      from: mapLast.from, to: mapLast.to,
+      freight: num($("qpFreight").value),
+      km: mapLast.km, dead: mapLast.dead, toll: mapLast.toll,
+      wait: num($("qpWait").value), cargo: "", rawLines: []
+    };
+    var c = calc(o);
+    var v = verdictOf(c);
+    var vd = $("qmVerdict");
+    if (vd) { vd.className = "verdict" + (v.cls ? " " + v.cls : ""); vd.textContent = v.text; }
+    if ($("qmNet")) $("qmNet").textContent = c.freight ? fmt(c.net, 0) : "0";
+    if ($("qmBigRow")) $("qmBigRow").className = "big" + (c.net < 0 ? " neg" : "");
+    if ($("qmHourly")) $("qmHourly").textContent = c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0);
+    if ($("qmPerKm")) $("qmPerKm").textContent = c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2);
+    if ($("qmHours")) $("qmHours").textContent = c.hrs > 0 ? fmt(c.hrs, 1) + "h" : "—";
+    var bits = [];
+    if (c.totalDriven > 0) bits.push("跑 " + fmt(c.totalDriven, 0) + " 公里" + (c.back ? "（含返程）" : ""));
+    if (c.fuel > 0) bits.push("油钱 ¥" + fmt(c.fuel, 0));
+    if (c.toll > 0) bits.push("过路 ¥" + fmt(c.toll, 0));
+    if (c.wait > 0) bits.push("等 " + fmt(c.wait, 1) + " 小时");
+    if ($("qmBreak")) $("qmBreak").textContent = bits.join("　·　") || "——";
+  }
+
   /* =========================================================
      九、路由 / 事件
      ========================================================= */
@@ -591,7 +635,7 @@
 
     // —— 速算输入
     ["qpFreight", "qpKm", "qpDead", "qpWait", "qpToll", "qpFrom", "qpTo", "qpCargo"].forEach(function (id) {
-      $(id).addEventListener("input", renderQuick);
+      $(id).addEventListener("input", function () { renderQuick(); renderMapResult(); });
     });
     $("qComeBack").checked = !!S.comeBack;
     $("qComeBack").onchange = function () {
@@ -796,6 +840,7 @@
     settings: function () { return S; },
     toast: toast,
     fillRoute: fillRoute,
+    showMapResult: showMapResult,
     go: go,
     num: num
   };
