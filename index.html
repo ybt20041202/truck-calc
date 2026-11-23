@@ -169,7 +169,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div class="topbar">
     <div>
-      <h1>货运接单快算 <span class="ver">v7-定位算里程-多平台</span></h1>
+      <h1>货运接单快算 <span class="ver">v8-粘贴直读-定位算里程</span></h1>
       <div class="sub">App 里复制一单 → 这里一贴 → 挣多少、该报多少，全出来</div>
     </div>
   </div>
@@ -181,7 +181,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
         <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h4"/></svg>
         粘贴一单
       </button>
-      <div class="pastetip">哪个 App 都行 —— 货拉拉、运满满、满帮、滴滴货运、快狗、省省回头车、群里的货主消息……<br />长按那一单的文字 → 复制 → 回来点这里；复制手机号短信也行</div>
+      <div class="pastetip">哪个 App 都行 —— 货拉拉、运满满、满帮、滴滴货运、快狗、省省回头车、群里的货主消息……<br />长按那一单的文字 → 复制 → 回来点这里（能读就直接算）；浏览器不让读时，框会自己选好，长按框 →「粘贴」即可，不用打字</div>
       <div class="pastebox">
         <textarea id="pasteSink" rows="2" placeholder="也可以直接把单子文字粘到这个框里（一次可以粘贴好多单）"></textarea>
         <div id="pasteResult" class="card" style="display:none;margin:8px 0 0;padding:8px 11px" hidden></div>
@@ -373,8 +373,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div id="toast"></div>
 </div>
-<script src="assets/parse.js"></script>
-<script src="assets/map.js"></script>
-<script src="assets/app.js"></script>
+<script src="assets/parse.js?v=8"></script>
+<script src="assets/map.js?v=8"></script>
+<script src="assets/app.js?v=8"></script>
 </body>
 </html>
