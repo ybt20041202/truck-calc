@@ -13,6 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none !important}
 :root{
   --bg:#eef1f4;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
   --green:#0f7a53;--red:#b91c1c;--amber:#b45309;--brand:#0f766e;
@@ -97,6 +98,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 .obtns .btn{flex:1}
 .obtns .btn.ghost{flex:0 0 auto}
 .linkbtn{border:0;background:none;color:var(--brand);font-family:inherit;font-size:12.5px;font-weight:700;padding:4px 0;cursor:pointer}
+.withbtn{display:flex;gap:7px;align-items:stretch}
+.withbtn input{flex:1;min-width:0}
+.withbtn .btn{flex:0 0 auto;white-space:nowrap}
+#mapBox{height:190px;margin-top:9px;border-radius:12px;overflow:hidden;background:#e8edf1;
+  border:1px solid var(--line);display:none}
+#mapBox.on{display:block}
 
 /* 订单卡 */
 .ord{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:9px;
@@ -162,7 +169,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div class="topbar">
     <div>
-      <h1>货运接单快算 <span class="ver">v6-粘贴秒算-多平台</span></h1>
+      <h1>货运接单快算 <span class="ver">v7-定位算里程-多平台</span></h1>
       <div class="sub">App 里复制一单 → 这里一贴 → 挣多少、该报多少，全出来</div>
     </div>
   </div>
@@ -197,6 +204,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
       </div>
       <div class="selrow" style="margin:9px 0 0">
         <label class="chk"><input type="checkbox" id="qComeBack" /> 算返程空驶（回程油钱也扣掉）</label>
+        <button class="linkbtn" id="qMapBtn" type="button" style="margin-left:auto">📍 用地图量里程</button>
       </div>
 
       <div class="result">
@@ -223,6 +231,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
         <button class="btn dark" id="qSave">记下这单</button>
         <button class="btn ghost" id="qSavePool">存进单池</button>
       </div>
+    </div>
+
+    <div class="card" id="mapCard">
+      <div class="selrow"><span class="muted">定位算里程：现在的位置 → 取货地 → 目的地</span></div>
+      <label class="f"><span>① 我现在在哪</span>
+        <div class="withbtn">
+          <input id="locNow" type="text" placeholder="点右边定位，或者填个地名" autocomplete="off" />
+          <button class="btn sm primary" id="btnGeo" type="button">定位</button>
+        </div>
+      </label>
+      <label class="f" style="margin-top:8px"><span>② 取货地（装货地址）</span><input id="locPick" type="text" placeholder="例如 杭州萧山机场国内货站" autocomplete="off" /></label>
+      <label class="f" style="margin-top:8px"><span>③ 目的地（卸货地址）</span><input id="locDest" type="text" placeholder="例如 苏州工业园" autocomplete="off" /></label>
+      <div class="obtns">
+        <button class="btn primary" id="btnRoute" type="button">算路线 · 填公里和过路费</button>
+        <button class="btn ghost" id="btnUseNow" type="button" title="把定位到的位置当成「我现在在哪」存起来">存为我的位置</button>
+      </div>
+      <div class="tip" id="mapInfo" style="margin-top:8px">正在准备地图…</div>
+      <div id="mapBox"></div>
+      <button class="linkbtn" id="btnMapReload" type="button" hidden>重新加载地图</button>
     </div>
   </section>
 
@@ -281,7 +308,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
         <label class="f"><span>每趟固定成本（元）</span><input id="setFixed" type="number" inputmode="decimal" placeholder="保险折旧分摊，没填就 0" /></label>
         <label class="f"><span>多久没更新标灰（分钟）</span><input id="setStale" type="number" inputmode="decimal" /></label>
       </div>
-      <label class="f" style="margin-top:9px"><span>我现在在哪（用来判断空驶）</span><input id="setHome" type="text" placeholder="例如 杭州萧山" /></label>
+      <label class="f" style="margin-top:9px"><span>我现在在哪（用来判断空驶）</span>
+        <div class="withbtn">
+          <input id="setHome" type="text" placeholder="点右边定位，或者自己填，例如 杭州萧山" />
+          <button class="btn sm" id="setHomeBtn" type="button">用当前位置</button>
+        </div>
+      </label>
+      <div class="tip" id="setHomeTip" style="margin:-2px 0 6px">这个框不会自己乱填。点了「用当前位置」才会去问手机你人在哪；没点就一直是空的，或者是你自己打的字。</div>
       <div class="tog">
         <span>默认算返程空驶</span>
         <input type="checkbox" id="setComeBack" />
@@ -290,11 +323,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
     </div>
 
     <div class="card">
-      <div class="selrow"><span class="muted">地图算里程（可选）</span></div>
-      <div class="tip" style="margin-bottom:8px">单子里没写公里数时，可以用高德按两地点量一下：<b>lbs.amap.com</b> → 注册 → 控制台建应用 → 加 Key（服务平台选「Web端 JS API」），新版还要一个安全密钥。</div>
+      <div class="selrow"><span class="muted">地图 Key（高德）</span></div>
+      <div class="tip" style="margin-bottom:8px">老站的 Key 已经带过来了，一般不用动。要是地图报「无效的 Key」，去 <b>lbs.amap.com</b> 控制台新申请一个（服务平台选「Web端 JS API」），把 Key 和下面的安全密钥填进来。</div>
       <label class="f"><span>高德 Key</span><input id="amapKey" type="text" placeholder="a1b2c3..." autocomplete="off" /></label>
       <label class="f" style="margin-top:8px"><span>安全密钥 jscode</span><input id="amapSec" type="text" placeholder="选填" autocomplete="off" /></label>
-      <div class="tip" style="margin-top:8px">填了之后单池里点「算这单」能看到高德量的实际里程。</div>
+      <div class="obtns">
+        <button class="btn" id="saveAmap" type="button">保存并重新加载地图</button>
+      </div>
     </div>
 
     <div class="card">
@@ -328,6 +363,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
   <div id="toast"></div>
 </div>
 <script src="assets/parse.js"></script>
+<script src="assets/map.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
