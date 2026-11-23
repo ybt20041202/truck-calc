@@ -19,9 +19,10 @@
     speed: 55,         // 平均时速
     target: 45,        // 目标时薪
     fixed: 0,          // 每趟固定成本（保险/折旧分摊）
-    home: "杭州",       // 我现在在哪
+    home: "",          // 我现在在哪 —— 不预设，必须是定位或用户自己填（v7 修）
     comeBack: true,    // 默认扣返程空驶
     staleMin: 8,       // 多久没更新标灰
+    mapOn: true,       // 是否自动加载地图（省流量，可在设置关掉）
     amapKey: "92f7745dba3d8592d9a5d21691c38abd",
     amapSec: "74bc3446ff478240796f2aaa0b8862ba"
   };
@@ -493,6 +494,8 @@
     $("setSpeed").value = S.speed;
     $("setTarget").value = S.target;
     $("setFixed").value = S.fixed;
+    // v7：以前版本把「杭州」硬塞进来，那个值不是定位来的，清掉让用户自己定位
+    if (S.home === "杭州" && !S.homeSet) S.home = "";
     $("setHome").value = S.home || "";
     $("setComeBack").checked = !!S.comeBack;
     $("setStale").value = S.staleMin;
@@ -500,16 +503,71 @@
     $("amapSec").value = S.amapSec || "";
   }
 
+  /* v7：地图算出来的数字填回速算表；用户已经填了更大的值就不往下改 */
+  function fillRoute(r) {
+    var changed = false;
+    var apply = function (id, v, isText) {
+      var el = $(id);
+      if (!el) return;
+      if (isText) {
+        if (v && !el.value.trim()) { el.value = v; changed = true; }
+        return;
+      }
+      if (v == null) return;
+      var old = parseFloat(el.value);
+      // 空着，或者用户填的比地图给的还小（大概是没量准），才覆盖
+      if (!isFinite(old) || old <= 0 || old < v) { el.value = v; changed = true; }
+    };
+    apply("qpDead", r.dead);
+    apply("qpKm", r.km);
+    apply("qpToll", r.toll);
+    var lp = $("locPick"), ld = $("locDest");
+    if (lp) apply("qpFrom", (lp.value || "").trim(), true);
+    if (ld) apply("qpTo", (ld.value || "").trim(), true);
+    if (changed) renderQuick();
+    return changed;
+  }
+
   /* =========================================================
      九、路由 / 事件
      ========================================================= */
   function go(page) {
-    document.querySelectorAll(".page").forEach(function (p) { p.hidden = p.dataset.page !== page; });
+    document.querySelectorAll(".page").forEach(function (p) {
+      var on = p.dataset.page === page;
+      p.hidden = !on;
+      p.style.display = on ? "" : "none";
+    });
     document.querySelectorAll(".navb button").forEach(function (b) { b.classList.toggle("on", b.dataset.go === page); });
     if (page === "pool") renderPool();
     if (page === "ledger") renderLedger();
     if (page === "settings") fillSettings();
+    if (page === "calc") setTimeout(maybeLoadMap, 120);
     window.scrollTo(0, 0);
+  }
+
+  /* 定位拿到的地名存下来（点了「用当前位置」才算数，绝不自己填） */
+  function commitHome(v) {
+    S.home = v; S.homeSet = true; save();
+    var h = $("setHome");
+    if (h) h.value = v;
+    toast("已填上：" + v);
+  }
+
+  /* v7：地图按需加载，第一次进算账页才去要脚本，省移动流量 */
+  function maybeLoadMap() {
+    if (!S.mapOn) return;
+    var box = $("mapBox");
+    if (box) box.classList.add("on");
+    if (window.TruckMap) window.TruckMap.load();
+  }
+
+  /* 打开地图卡时把起点终点带过去，省得再打一遍 */
+  function syncMapInputs() {
+    var o = fromInputs();
+    var pick = $("locPick"), dest = $("locDest"), now = $("locNow");
+    if (o.from && pick && !pick.value.trim()) pick.value = o.from;
+    if (o.to && dest && !dest.value.trim()) dest.value = o.to;
+    if (now && !now.value.trim() && S.home) now.value = S.home;
   }
 
   function bind() {
@@ -626,6 +684,73 @@
       toast("设置已保存");
     };
 
+    // —— v7：定位 / 地图
+    if ($("setHomeBtn")) {
+      $("setHomeBtn").onclick = function () {
+        if (window.TruckMap) window.TruckMap.useHere(commitHome);
+        else toast("地图脚本没加载出来，刷新一下");
+      };
+    }
+    if ($("btnGeo")) {
+      $("btnGeo").onclick = function () {
+        if (window.TruckMap) window.TruckMap.locate(false);
+        else toast("地图脚本没加载出来，刷新一下");
+      };
+    }
+    if ($("btnRoute")) {
+      $("btnRoute").onclick = function () {
+        if (window.TruckMap) window.TruckMap.runRoute();
+        else toast("地图脚本没加载出来，刷新一下");
+      };
+    }
+    if ($("btnUseNow")) {
+      // 把地图里定位到的位置，存成「我现在在哪」
+      $("btnUseNow").onclick = function () {
+        var v = ($("locNow").value || "").trim();
+        if (!v) { toast("先点「定位」或填个地名"); return; }
+        S.home = v; S.homeSet = true; save();
+        $("setHome").value = v;
+        toast("已记为我的位置：" + v);
+      };
+    }
+    if ($("btnMapReload")) {
+      $("btnMapReload").onclick = function () {
+        if (window.TruckMap) window.TruckMap.setKeys();
+      };
+    }
+    if ($("saveAmap")) {
+      $("saveAmap").onclick = function () {
+        S.amapKey = $("amapKey").value.trim();
+        S.amapSec = $("amapSec").value.trim();
+        save();
+        if (!S.amapKey) { toast("Key 是空的，地图加载不了"); return; }
+        toast("已保存，正在重新加载地图");
+        if (window.TruckMap) window.TruckMap.setKeys();
+      };
+    }
+    if ($("qMapBtn")) {
+      $("qMapBtn").onclick = function () {
+        syncMapInputs();
+        var card = $("locPick").closest(".card");
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (window.TruckMap) window.TruckMap.load();
+        setTimeout(function () {
+          var el = $("locPick");
+          if (el && !el.value.trim()) el.focus();
+        }, 420);
+      };
+    }
+    ["locNow", "locPick", "locDest"].forEach(function (id) {
+      var el = $(id);
+      if (el) el.addEventListener("change", function () {
+        try { localStorage.setItem("truckv7.loc." + id, el.value); } catch (e) {}
+      });
+      try {
+        var v = localStorage.getItem("truckv7.loc." + id);
+        if (v && el && !el.value) el.value = v;
+      } catch (e) {}
+    });
+
     document.querySelectorAll("[data-go]").forEach(function (b) {
       b.onclick = function () { go(b.dataset.go); };
     });
@@ -658,11 +783,22 @@
     renderPool();
     renderLedger();
     go("calc");
+    // v7：地图第一次要用了才加载（等页面空下来，别抢首页的渲染）
+    setTimeout(maybeLoadMap, 1400);
     // 第一次用给个提示
     if (!pool.length && !ledger.length) {
       setTimeout(function () { toast("在 App 里长按单子的文字→复制，回来点「粘贴」"); }, 900);
     }
   }
+
+  // 给 map.js 用的钩子（v7）
+  window.TruckApp = {
+    settings: function () { return S; },
+    toast: toast,
+    fillRoute: fillRoute,
+    go: go,
+    num: num
+  };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
