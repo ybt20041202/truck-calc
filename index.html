@@ -3,1148 +3,331 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="robots" content="noindex,nofollow,noarchive" />
-<meta name="theme-color" content="#eef1f4" />
+<meta name="theme-color" content="#0f172a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<title>接单算账</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="robots" content="noindex,nofollow,noarchive" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f172a'/%3E%3Cpath d='M6 11h13v10H6z' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M19 15h5l3 4v2h-8z' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E" />
+<title>货运接单快算</title>
+<link rel="manifest" href="manifest.webmanifest" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#eef1f4;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
-  --green:#0f7a53;--red:#b91c1c;--amber:#b45309;--dark:#111827;
+  --green:#0f7a53;--red:#b91c1c;--amber:#b45309;--brand:#0f766e;
 }
 html,body{margin:0;max-width:100%;overflow-x:hidden;background:var(--bg);color:var(--ink);
   font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-body{padding:calc(14px + env(safe-area-inset-top)) 12px calc(30px + env(safe-area-inset-bottom))}
-.app{max-width:560px;margin:0 auto}
-h1{font-size:22px;margin:0 0 2px;letter-spacing:-.3px}
-.sub{margin:0 0 14px;color:var(--muted);font-size:13px}
-.ver{display:inline-block;margin-left:6px;font-size:11px;color:#94a3b8;
-  background:#e7ecf2;border-radius:999px;padding:1px 7px;vertical-align:1px}
-.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;
+body{padding:calc(10px + env(safe-area-inset-top)) 12px calc(80px + env(safe-area-inset-bottom))}
+.app{max-width:620px;margin:0 auto}
+.muted{color:var(--muted);font-size:12px}
+.green{color:var(--green)}.red{color:var(--red)}.warnText{color:var(--amber);font-style:normal}
+h1{font-size:20px;margin:0;letter-spacing:-.3px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:11px}
+.topbar .sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+h1 .ver{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;letter-spacing:0;
+  color:#0f766e;background:#d7f0ea;border-radius:999px;padding:2px 8px;vertical-align:2px}
+.card{background:var(--card);border-radius:16px;padding:13px;margin-bottom:11px;
   box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 18px rgba(15,23,42,.04)}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tip{font-size:12px;color:var(--muted);line-height:1.65}
+.tip b{color:#334155}
+
+/* 粘贴大按钮 */
+.pastewrap{margin-bottom:11px}
+.pastebtn{width:100%;border:0;border-radius:16px;padding:16px;font-family:inherit;font-size:17px;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,#0f766e,#115e59);display:flex;align-items:center;justify-content:center;
+  gap:9px;box-shadow:0 8px 20px rgba(15,118,110,.28);letter-spacing:.2px}
+.pastebtn:active{transform:scale(.985)}
+.pastebtn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pastetip{text-align:center;font-size:11.5px;color:var(--muted);margin-top:6px}
+.pastebox{margin-top:8px}
+.pastebox textarea{width:100%;border:1px dashed var(--line);border-radius:12px;padding:10px;font-size:13px;
+  font-family:inherit;line-height:1.55;background:#fbfcfd;resize:vertical;min-height:74px}
+.pres{display:flex;align-items:baseline;gap:7px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.pres:last-child{border:0}
+.pres b{color:#94a3b8;font-size:11px;min-width:14px}
+.pres i{color:var(--muted);font-style:normal;font-size:12px;margin-left:auto}
+
+/* 输入 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .f{display:block}
-.f span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
-input[type=number]{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:18px;font-weight:600;color:var(--ink);background:#fbfcfd;
-  font-variant-numeric:tabular-nums;appearance:none}
-input[type=number]:focus{outline:none;border-color:#94a3b8;background:#fff}
-input[type=text]{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:16px;color:var(--ink);background:#fbfcfd;font-family:inherit}
-input[type=text]:focus{outline:none;border-color:#94a3b8;background:#fff}
-input[type=text]::placeholder{color:#94a3b8}
-.result{margin:14px 0 12px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid var(--line)}
-.verdict{display:inline-block;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;
-  background:#e2e8f0;color:#475569}
+.f span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+input[type=number],input[type=text],select,textarea{width:100%;min-width:0;padding:10px 11px;border:1px solid var(--line);
+  border-radius:10px;font-size:15px;color:var(--ink);background:#fbfcfd;font-family:inherit;appearance:none}
+input[type=number]{font-variant-numeric:tabular-nums;font-weight:700}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;background:#fff}
+.selrow{display:flex;gap:8px;align-items:center;margin-bottom:9px}
+.selrow select{flex:1}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;white-space:nowrap}
+.chk input{width:auto;accent-color:var(--brand)}
+
+/* 结果 */
+.result{margin:12px 0 10px;padding:13px;border-radius:14px;background:#f8fafc;border:1px solid var(--line)}
+.verdict{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:#e2e8f0;color:#475569}
 .verdict.ok{background:#dcfce7;color:#166534}
 .verdict.warn{background:#fef3c7;color:#92400e}
 .verdict.bad{background:#fee2e2;color:#991b1b}
 .big{display:flex;align-items:baseline;gap:2px;margin:8px 0 0}
-.big .cur{font-size:22px;font-weight:700;color:var(--muted)}
-.big .n{font-size:44px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums}
-.big .unit{font-size:13px;color:var(--muted);margin-left:6px}
+.big .cur{font-size:20px;font-weight:700;color:var(--muted)}
+.big .n{font-size:42px;font-weight:800;letter-spacing:-1.4px;font-variant-numeric:tabular-nums;line-height:1}
+.big .unit{font-size:12px;color:var(--muted);margin-left:6px}
 .big.neg .n{color:var(--red)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.stats b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
 .stats i{font-size:11px;color:var(--muted);font-style:normal}
-.brk{margin-top:11px;padding-top:9px;border-top:1px dashed var(--line);
-  font-size:12px;color:var(--muted);line-height:1.7}
-.quote{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;
-  padding-top:10px;border-top:1px dashed var(--line)}
+.quote{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;padding-top:10px;border-top:1px dashed var(--line)}
 .quote span{display:block;font-size:11px;color:var(--muted);margin-bottom:1px}
-.quote b{font-size:17px;font-variant-numeric:tabular-nums}
-.routes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.routes:empty{display:none}
-.chip{border:1px solid var(--line);background:#f8fafc;color:var(--ink);font-family:inherit;
-  font-size:12px;font-weight:600;padding:6px 9px;border-radius:999px;
-  display:inline-flex;align-items:center;gap:7px;line-height:1.2}
-.chip b{color:#94a3b8;font-size:14px;font-weight:700;padding:0 1px}
-.linkbtn{border:0;background:none;color:#0f766e;font-family:inherit;font-size:12px;
-  font-weight:600;padding:4px 0;margin:2px 0 0}
-.btnrow{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;margin-top:12px}
-.btnrow .btn{margin-top:0}
-.btnrow .btn.ghost{padding:14px 6px;font-size:14px}
-.hd{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;
-  font-size:15px;margin-bottom:10px}
-.hd .muted{font-weight:500;font-size:11px;color:var(--muted)}
-.cmp{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
-.cmp:first-child{border-top:0;padding-top:2px}
-.cmp .m{flex:1;min-width:0}
-.cmp .l1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.cmp .l1 b{font-size:18px;font-variant-numeric:tabular-nums}
-.cmp .l1 b.neg{color:var(--red)}
-.cmp .l1 em{font-style:normal;font-size:11px;color:var(--muted)}
-.cmp .l2{font-size:11px;color:var(--muted);margin-top:2px}
-.best{flex:0 0 auto;background:#dcfce7;color:#166534;font-size:10px;font-weight:700;
-  padding:3px 7px;border-radius:999px}
-textarea{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:15px;line-height:1.6;color:var(--ink);background:#fbfcfd;font-family:inherit;resize:vertical}
-textarea:focus{outline:none;border-color:#94a3b8;background:#fff}
-textarea::placeholder{color:#94a3b8}
-select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
-  font-size:14px;font-weight:600;color:var(--ink);background:#f8fafc;font-family:inherit;appearance:none}
-.take{flex:0 0 auto;border:0;background:var(--dark);color:#fff;font-family:inherit;font-size:12px;
-  font-weight:700;padding:8px 10px;border-radius:9px;line-height:1.2}
-.take:active{opacity:.85}
-.stale{opacity:.55}
-.oldmark{color:var(--amber)}
-.boardtop{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.boardtop select{grid-column:1/-1}
-.rowin{display:flex;gap:8px;align-items:stretch}
-.rowin input{flex:1;min-width:0}
-.mini{flex:0 0 auto;border:1px solid var(--line);background:#f1f5f9;color:var(--ink);
-  font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border-radius:10px;
-  min-height:44px}
-.mini:active{opacity:.85}
-#mapBox{height:200px;border-radius:12px;margin-top:10px;overflow:hidden;background:#e6edf5}
-#mapInfo{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.7}
-.btn{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;line-height:1.25;
-  background:var(--dark);color:#fff;font-size:16px;font-weight:700;font-family:inherit}
-.btn:active{opacity:.88;transform:scale(.995)}
-.btn.ghost{background:#f1f5f9;color:#0f172a;font-weight:600;font-size:14px;padding:11px}
-details.card summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;
-  display:flex;justify-content:space-between;align-items:center;gap:10px}
-details.card summary::-webkit-details-marker{display:none}
-details.card summary::after{content:"展开";font-size:12px;font-weight:500;color:var(--muted);
-  flex:0 0 auto;white-space:nowrap}
-details.card[open] summary::after{content:"收起"}
-details.card .body{margin-top:12px}
-.ledgerhead{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.ledgerhead>div{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:9px 11px}
-.ledgerhead .k{display:block;font-size:11px;color:var(--muted);margin-bottom:1px}
-.ledgerhead b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
-.ledgerhead .k2{display:block;font-size:11px;color:var(--muted);margin-top:1px}
-.row{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.row .m{flex:1;min-width:0}
-.row .l1{display:flex;gap:8px;align-items:baseline;font-weight:700;font-variant-numeric:tabular-nums}
-.row .l1 em{font-style:normal;color:var(--muted);font-weight:500;font-size:12px}
-.row .l1 .neg{color:var(--red)}
-.row .l2{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .del{border:0;background:#f1f5f9;color:#64748b;width:32px;height:32px;flex:0 0 32px;
-  border-radius:9px;font-size:16px;line-height:1;font-family:inherit}
-.empty{color:var(--muted);font-size:13px;padding:12px 0;text-align:center}
-.tip{font-size:12px;color:var(--muted);line-height:1.75}
-.tip b{color:#334155}
-.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);opacity:0;
-  background:#111827;color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;
-  pointer-events:none;transition:.22s;z-index:9}
-.toast.show{opacity:1;transform:translate(-50%,0)}
+.quote b{font-size:18px;font-variant-numeric:tabular-nums}
+.brk{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.7}
+.backhint{margin-top:8px;padding-top:8px;border-top:0;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;
+  border-radius:9px;padding:8px 10px;line-height:1.6}
+
+/* 按钮 */
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);font-family:inherit;font-weight:700;
+  font-size:15px;padding:12px 14px;border-radius:11px;cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;text-decoration:none;transition:.12s}
+.btn:active{transform:scale(.985)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.sm{font-size:13.5px;padding:9px 11px;border-radius:10px}
+.btn.ghost{background:#f8fafc;color:#475569}
+.btn.block{width:100%}
+.obtns{display:flex;gap:8px;margin-top:10px}
+.obtns .btn{flex:1}
+.obtns .btn.ghost{flex:0 0 auto}
+.linkbtn{border:0;background:none;color:var(--brand);font-family:inherit;font-size:12.5px;font-weight:700;padding:4px 0;cursor:pointer}
+
+/* 订单卡 */
+.ord{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:9px;
+  box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.ord.bad{border-color:#fecaca;background:#fffafa}
+.ohead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.rank{width:19px;height:19px;border-radius:6px;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:800;
+  display:inline-flex;align-items:center;justify-content:center}
+.ord:first-child .rank{background:var(--brand);color:#fff}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;
+  background:#f1f5f9;color:#334155;border:1px solid var(--line)}
+.tag.auto{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.ofresh{margin-left:auto;font-size:11px;color:#94a3b8}
+.oroute{display:flex;align-items:center;gap:7px;font-size:16.5px;font-weight:800;letter-spacing:-.3px;
+  flex-wrap:wrap;line-height:1.3}
+.oroute b{color:#94a3b8;font-weight:600}
+.ometa{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.omoney{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:9px;
+  padding-top:9px;border-top:1px dashed var(--line)}
+.om-main{display:flex;align-items:baseline;gap:2px}
+.om-main span{font-size:14px;color:var(--muted)}
+.om-main b{font-size:24px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+.om-main i{font-size:11px;color:var(--muted);font-style:normal;margin-left:3px}
+.om-sub{text-align:right;line-height:1.35}
+.om-sub b{font-size:15px;font-variant-numeric:tabular-nums;display:block}
+.om-sub i{font-size:11px;color:var(--muted);font-style:normal;font-variant-numeric:tabular-nums}
+
+/* 账本 */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+.tile{background:#fff;border-radius:14px;padding:12px;border:1px solid var(--line)}
+.tile span{font-size:11px;color:var(--muted)}
+.tile b{display:block;font-size:21px;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile em{font-size:11px;color:var(--muted);font-style:normal;display:block;margin-top:1px}
+.lrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.lrow:last-child{border:0}
+.lr1{font-size:14px;font-weight:700}
+.lr2{font-size:11.5px;color:var(--muted);margin-top:1px}
+.lsum{text-align:right;display:flex;align-items:center;gap:8px}
+.lsum b{font-size:16px;font-variant-numeric:tabular-nums}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:24px 10px;line-height:1.8}
+
+/* 设置 */
+.tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+.tog span{font-size:14px;font-weight:600}
+.tog input{width:20px;height:20px;accent-color:var(--brand)}
+
+/* 导航 */
+.navb{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:50}
+.navb button{flex:1;border:0;background:none;font-family:inherit;font-size:11px;font-weight:600;color:#94a3b8;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer}
+.navb button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.navb button.on{color:var(--brand)}
+
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,18px);
+  background:rgba(15,23,42,.94);color:#fff;font-size:13px;padding:10px 16px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:.22s;z-index:99;max-width:88%;text-align:center;line-height:1.45}
+#toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
 <div class="app">
-  <h1>接单算账</h1>
-  <p class="sub">运费、里程、等待时间填进去，马上知道这单值不值得跑<span class="ver">v2026-11-23</span></p>
 
-  <details class="card" id="mapCard">
-    <summary>地图算里程（可选）</summary>
-    <div class="body">
-      <div id="mapSetup">
-        <div class="tip" style="margin-bottom:10px">
-          这一块用的是<b>高德地图</b>，要一个免费 Key 才能用：打开 <b>lbs.amap.com</b> → 注册 → 实名认证（个人，几分钟）→ 控制台 → 应用管理 → 创建新应用 → 添加 Key → 服务平台选 <b>Web端(JS API)</b>。新申请的 Key 还会给一个「安全密钥」，两个都粘到下面。
+  <div class="topbar">
+    <div>
+      <h1>货运接单快算 <span class="ver">v6-粘贴秒算-多平台</span></h1>
+      <div class="sub">App 里复制一单 → 这里一贴 → 挣多少、该报多少，全出来</div>
+    </div>
+  </div>
+
+  <!-- ============ 算账（主页面） ============ -->
+  <section class="page" data-page="calc">
+    <div class="pastewrap">
+      <button class="pastebtn" id="pasteBtn">
+        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h4"/></svg>
+        粘贴一单
+      </button>
+      <div class="pastetip">哪个 App 都行 —— 货拉拉、运满满、满帮、滴滴货运、快狗、省省回头车、群里的货主消息……<br />长按那一单的文字 → 复制 → 回来点这里；复制手机号短信也行</div>
+      <div class="pastebox">
+        <textarea id="pasteSink" rows="2" placeholder="也可以直接把单子文字粘到这个框里（一次可以粘贴好多单）"></textarea>
+        <div id="pasteResult" class="card" style="display:none;margin:8px 0 0;padding:8px 11px" hidden></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="linkbtn" id="pasteClear">清掉</button>
         </div>
-        <label class="f"><span>高德 Key</span><input id="amapKey" type="text" placeholder="例如 a1b2c3d4e5f6..." autocomplete="off" /></label>
-        <label class="f"><span>安全密钥 jscode（新 Key 才有，没有就空着）</span><input id="amapSec" type="text" placeholder="选填" autocomplete="off" /></label>
-        <button class="btn ghost" id="btnKey" style="margin-top:10px">保存并加载地图</button>
-        <div class="tip" style="margin-top:8px">「定位」按钮要靠浏览器给位置权限，只有 https 的网页（或者放到网上）才给；双击本地打开的话，地图和算路线一般还能用，定位会失败，手动填地点就行。</div>
-      </div>
-
-      <div id="mapMain" hidden>
-        <label class="f"><span>现在的位置</span>
-          <div class="rowin"><input id="locNow" type="text" placeholder="点右边「定位」，或者输入" autocomplete="off" /><button class="mini" id="btnGeo">定位</button></div>
-        </label>
-        <label class="f" style="margin-top:10px"><span>取货地点</span><input id="locPick" type="text" placeholder="例如 义乌国际商贸城" autocomplete="off" /></label>
-        <label class="f" style="margin-top:10px"><span>目的地</span><input id="locDest" type="text" placeholder="例如 广州白云物流园" autocomplete="off" /></label>
-        <button class="btn" id="btnRoute" style="margin-top:12px">算路线并填进去</button>
-        <div id="mapBox"></div>
-        <div id="mapInfo"></div>
-        <button class="linkbtn" id="btnKeyReset" style="margin-top:6px">换一个 Key</button>
       </div>
     </div>
-  </details>
 
-  <section class="card">
-    <div class="routes" id="routes"></div>
-    <div class="grid">
-      <label class="f"><span>运费（元）</span><input id="freight" type="number" inputmode="decimal" placeholder="0" /></label>
-      <label class="f"><span>载货里程（公里）</span><input id="km" type="number" inputmode="decimal" placeholder="0" /></label>
-      <label class="f"><span>空驶里程（公里）</span><input id="dead" type="number" inputmode="decimal" placeholder="0" /></label>
-      <label class="f"><span>装卸等待（小时）</span><input id="wait" type="number" inputmode="decimal" placeholder="0" /></label>
-      <label class="f"><span>过路费（元）</span><input id="toll" type="number" inputmode="decimal" placeholder="0" /></label>
-      <label class="f"><span>其他费用（元）</span><input id="other" type="number" inputmode="decimal" placeholder="0" /></label>
-    </div>
-
-    <button class="linkbtn" id="saveRoute">＋ 把这条线存成常用线路</button>
-
-    <div class="result" id="result">
-      <div class="verdict" id="verdict">填数字看结果</div>
-      <div class="big" id="bigrow"><span class="cur">¥</span><span class="n" id="net">0</span><span class="unit">净赚</span></div>
-      <div class="stats">
-        <div><b id="perkm">—</b><i>每公里净赚</i></div>
-        <div><b id="hourly">—</b><i>每小时净赚</i></div>
-        <div><b id="hours">—</b><i>预计用时</i></div>
+    <div class="card">
+      <div class="grid2">
+        <label class="f"><span>运费（元）</span><input id="qpFreight" type="number" inputmode="decimal" placeholder="0" /></label>
+        <label class="f"><span>载货里程（公里）</span><input id="qpKm" type="number" inputmode="decimal" placeholder="0" /></label>
+        <label class="f"><span>起点</span><input id="qpFrom" type="text" placeholder="装货地" /></label>
+        <label class="f"><span>终点</span><input id="qpTo" type="text" placeholder="卸货地" /></label>
+        <label class="f"><span>空驶（公里）</span><input id="qpDead" type="number" inputmode="decimal" placeholder="0" /></label>
+        <label class="f"><span>装卸等待（小时）</span><input id="qpWait" type="number" inputmode="decimal" placeholder="0" /></label>
+        <label class="f"><span>过路费（元）</span><input id="qpToll" type="number" inputmode="decimal" placeholder="0" /></label>
+        <label class="f"><span>车型/货名</span><input id="qpCargo" type="text" placeholder="选填" /></label>
       </div>
-      <div class="quote">
-        <div><span>保本价（低于就倒贴）</span><b id="qCost">—</b></div>
-        <div><span>报价起（才够目标时薪）</span><b id="qBid">—</b></div>
+      <div class="selrow" style="margin:9px 0 0">
+        <label class="chk"><input type="checkbox" id="qComeBack" /> 算返程空驶（回程油钱也扣掉）</label>
       </div>
-      <div class="brk" id="brk"></div>
-    </div>
 
-    <div class="btnrow">
-      <button class="btn" id="save">记下这一单</button>
-      <button class="btn ghost" id="addCmp">加入对比</button>
+      <div class="result">
+        <div class="verdict" id="qVerdict">填完运费和里程就算出来</div>
+        <div class="big" id="qBigRow"><span class="cur">¥</span><span class="n" id="qNet">0</span><span class="unit">这一趟净赚</span></div>
+        <div class="stats">
+          <div><b id="qHourly">—</b><i>每小时净赚</i></div>
+          <div><b id="qPerKm">—</b><i>每公里净赚</i></div>
+          <div><b id="qHours">—</b><i>预计用时</i></div>
+        </div>
+        <div class="quote">
+          <div><span>保本价（低于就倒贴）</span><b id="qBreakeven">—</b></div>
+          <div><span>报价起点（够目标时薪）</span><b id="qBid">—</b></div>
+        </div>
+        <div class="brk" id="qBreak">——</div>
+        <div class="brk backhint" id="qBackHint" hidden></div>
+      </div>
+
+      <div class="obtns" style="flex-wrap:wrap">
+        <button class="btn primary" id="qCopyBid">复制报价 ¥0</button>
+        <button class="btn" id="qCopyOrder">复制这单信息</button>
+      </div>
+      <div class="obtns">
+        <button class="btn dark" id="qSave">记下这单</button>
+        <button class="btn ghost" id="qSavePool">存进单池</button>
+      </div>
     </div>
   </section>
 
-  <details class="card" id="boardCard" open>
-    <summary>多单比价</summary>
-    <div class="body">
-      <div class="tip" style="margin-bottom:8px">把平台上的单复制出来，<b>一行一单</b>贴进下面。认得出的写法：<br />
-        <span style="color:#334155">杭州萧山 → 广州白云 1141公里 5200元 等2小时 过路费580</span></div>
-      <textarea id="pasteBox" rows="3" placeholder="杭州萧山 → 广州白云 1141公里 5200元&#10;杭州 → 义乌 120公里 380元 等1小时"></textarea>
-      <div class="btnrow">
-        <button class="btn" id="addPaste">贴进来算</button>
-        <button class="btn ghost" id="addManual">加当前这单</button>
-      </div>
-      <button class="linkbtn" id="readClip">或：从剪贴板读一单（先在平台里复制）</button>
-      <div class="boardtop">
-        <select id="boardSort">
-          <option value="hourly">按时薪排（谁更值钱）</option>
-          <option value="net">按净赚排（谁给钱多）</option>
-          <option value="perKm">按每公里排</option>
-          <option value="short">按里程排（离得近的在前）</option>
+  <!-- ============ 单池 ============ -->
+  <section class="page" data-page="pool" hidden>
+    <div class="card">
+      <div class="selrow">
+        <select id="poolSort">
+          <option value="hourly">排：时薪最高</option>
+          <option value="net">排：净赚最多</option>
+          <option value="perKm">排：每公里最高</option>
+          <option value="fresh">排：最晚贴的</option>
+          <option value="freight">排：运费最高</option>
+          <option value="km">排：路程最长</option>
         </select>
+        <span class="muted" id="poolCount"></span>
       </div>
-      <div id="boardRows"></div>
-      <div class="hd" style="margin:10px 0 0"><span class="muted" id="boardCount"></span>
-        <button class="linkbtn" id="boardClear" style="margin:0">清空</button></div>
-      <div class="tip" id="boardTip" style="margin-top:6px">单子在平台上是会跑掉的，贴进来超过十分钟我会标出来——别对着旧单子等。</div>
-    </div>
-  </details>
-
-  <section class="card" id="cmpCard" hidden>
-    <div class="hd"><span>对比</span><span class="muted" id="cmpCount"></span></div>
-    <div id="cmpRows"></div>
-    <button class="linkbtn" id="cmpClear">清空对比</button>
-  </section>
-
-  <details class="card">
-    <summary>我的车和标准</summary>
-    <div class="body grid">
-      <label class="f"><span>油耗（升/百公里）</span><input id="setFuel" type="number" inputmode="decimal" /></label>
-      <label class="f"><span>油价（元/升）</span><input id="setPrice" type="number" inputmode="decimal" /></label>
-      <label class="f"><span>平均时速（公里）</span><input id="setSpeed" type="number" inputmode="decimal" /></label>
-      <label class="f"><span>目标时薪（元）</span><input id="setTarget" type="number" inputmode="decimal" /></label>
-      <label class="f" style="grid-column:1/-1"><span>本趟分摊固定成本（元，车贷保险保养，不填就是 0）</span><input id="setFixed" type="number" inputmode="decimal" /></label>
-      <div style="grid-column:1/-1">
-        <div class="hd" style="margin:12px 0 8px">加油记油耗</div>
-        <div class="grid">
-          <label class="f"><span>里程表读数（公里）</span><input id="odo" type="number" inputmode="decimal" placeholder="0" /></label>
-          <label class="f"><span>这次加了（升）</span><input id="liters" type="number" inputmode="decimal" placeholder="0" /></label>
-        </div>
-        <button class="btn ghost" id="addFuel" style="margin-top:10px">记一次加油</button>
-        <div class="tip" id="fuelReal" style="margin-top:8px">记两次加油就能算出真实百公里油耗。</div>
-        <button class="linkbtn" id="useFuel" hidden>用这个油耗</button>
+      <div class="selrow" style="margin:0">
+        <input id="poolKeyword" type="text" placeholder="搜地名/货名，例如 广州、家具" />
+      </div>
+      <div class="selrow" style="margin:8px 0 0">
+        <label class="chk"><input type="checkbox" id="poolHideBad" /> 只看能跑的</label>
+        <button class="linkbtn" id="poolClear" style="margin-left:auto">清空单池</button>
       </div>
     </div>
-  </details>
-
-  <section class="card">
-    <div class="ledgerhead">
-      <div><span class="k">今日</span><b id="tToday">—</b><span class="k2" id="tTodayRate"></span></div>
-      <div><span class="k">本月</span><b id="tMonth">—</b><span class="k2" id="tMonthRate"></span></div>
-    </div>
-    <div id="rows"></div>
-    <button class="btn ghost" id="export">导出账本（Excel 能打开）</button>
+    <div id="poolList"></div>
   </section>
 
-  <details class="card">
-    <summary>怎么用</summary>
-    <div class="body tip">
-      <b>空驶里程</b>：去装货点路上跑的空路，也算成本，一定要填。<br />
-      <b>装卸等待</b>：排队、装车、卸货的时间，时薪算不算得过来全看它。<br />
-      <b>每公里净赚</b>：低于 1.5 元要格外小心，长途专线单价可以低一点，但总时薪不能塌。<br />
-      <b>时薪</b>：低于目标时薪七折就是「不划算」，别只看运费金额大。<br />
-      <b>保本价 / 报价起</b>：保本价是油钱加过路加固定摊，低于它跑一趟就亏；报价起是按目标时薪算出来的，有人让你报价就照这个数往上说。<br />
-      <b>常用线路</b>：填好里程、过路、等待，点「存成常用线路」，下次点一下名字就带回来，只填运费。<br />
-      <b>多单比价</b>：平台上的单复制出来，一行一单贴进框里（写成「杭州→广州 1141公里 5200元 等2小时」），自动按你的油耗和标准算净赚、时薪，按「按时薪排／按净赚排／按里程排」看谁划得来，点「算这单」直接把数填回上面，再点「记下这一单」入账。<br />
-      <b>加入对比</b>：屏幕上几个单拿不准，算完各点一次「加入对比」，谁时薪高一眼看出来。<br />
-      <b>加油记油耗</b>：「我的车和标准」里记两次加油（里程表读数＋升数），就能算出他车的真实油耗，点「用这个油耗」自动改。<br />
-      <b>地图算里程</b>：填「现在的位置／取货地点／目的地」，点「算路线并填进去」，公里数、过路费、平均时速一次填好，只剩运费要自己填。<br />
-      <b>油耗默认 30 升</b>：按 9.6 米车填的，4.2 米轻卡改成 13–16 升更准。<br />
-      不开地图的话，数据只存在这台手机里，不上传也不联网；用地图算里程才会连一次高德问路线。<br />
-      <b>记录存不住？</b>用 Chrome、夸克、Edge 这类浏览器打开；在微信里直接点开，可能不让存。
+  <!-- ============ 账本 ============ -->
+  <section class="page" data-page="ledger" hidden>
+    <div class="tiles">
+      <div class="tile"><span>今天净赚</span><b id="lToday">¥0</b><em id="lTodaySub">0 单</em></div>
+      <div class="tile"><span>近 7 天净赚</span><b id="lWeek">¥0</b><em id="lWeekSub">0 单</em></div>
+      <div class="tile"><span>本月净赚</span><b id="lMonth">¥0</b><em id="lMonthSub">0 单</em></div>
+      <div class="tile"><span>本月平均时薪</span><b id="lHourly">—</b><em id="lHourlySub">—</em></div>
     </div>
-  </details>
+    <div class="card">
+      <div class="selrow">
+        <span class="muted">跑过的单</span>
+        <button class="linkbtn" id="lExport" style="margin-left:auto">导出 CSV</button>
+        <button class="linkbtn" id="lClear" style="color:#94a3b8">清空</button>
+      </div>
+      <div id="lRows"></div>
+    </div>
+  </section>
 
-  <p class="tip" style="text-align:center;margin:4px 0 0">算完点「记下这一单」，月底就知道哪条线真赚钱。</p>
+  <!-- ============ 设置 ============ -->
+  <section class="page" data-page="settings" hidden>
+    <div class="card">
+      <div class="selrow"><span class="muted">我的车和标准（算账用，改一次一直记住）</span></div>
+      <div class="grid2">
+        <label class="f"><span>油耗（升/百公里）</span><input id="setFuel" type="number" inputmode="decimal" /></label>
+        <label class="f"><span>油价（元/升）</span><input id="setPrice" type="number" inputmode="decimal" /></label>
+        <label class="f"><span>平均时速（公里）</span><input id="setSpeed" type="number" inputmode="decimal" /></label>
+        <label class="f"><span>目标时薪（元/小时）</span><input id="setTarget" type="number" inputmode="decimal" /></label>
+        <label class="f"><span>每趟固定成本（元）</span><input id="setFixed" type="number" inputmode="decimal" placeholder="保险折旧分摊，没填就 0" /></label>
+        <label class="f"><span>多久没更新标灰（分钟）</span><input id="setStale" type="number" inputmode="decimal" /></label>
+      </div>
+      <label class="f" style="margin-top:9px"><span>我现在在哪（用来判断空驶）</span><input id="setHome" type="text" placeholder="例如 杭州萧山" /></label>
+      <div class="tog">
+        <span>默认算返程空驶</span>
+        <input type="checkbox" id="setComeBack" />
+      </div>
+      <button class="btn primary block" id="saveSettings" style="margin-top:6px">保存设置</button>
+    </div>
+
+    <div class="card">
+      <div class="selrow"><span class="muted">地图算里程（可选）</span></div>
+      <div class="tip" style="margin-bottom:8px">单子里没写公里数时，可以用高德按两地点量一下：<b>lbs.amap.com</b> → 注册 → 控制台建应用 → 加 Key（服务平台选「Web端 JS API」），新版还要一个安全密钥。</div>
+      <label class="f"><span>高德 Key</span><input id="amapKey" type="text" placeholder="a1b2c3..." autocomplete="off" /></label>
+      <label class="f" style="margin-top:8px"><span>安全密钥 jscode</span><input id="amapSec" type="text" placeholder="选填" autocomplete="off" /></label>
+      <div class="tip" style="margin-top:8px">填了之后单池里点「算这单」能看到高德量的实际里程。</div>
+    </div>
+
+    <div class="card">
+      <div class="selrow"><span class="muted">这版是怎么工作的</span></div>
+      <div class="tip">
+        <b>1.</b> 单子从 App 里自己复制进来，网页不连平台、不要账号密码，不会影响账号。<br />
+        <b>2.</b> 粘贴时自动认起点、终点、运费、公里、车型、装货时间，一次可贴多单，重复的自动去掉。<br />
+        <b>3.</b> <b>跟哪个平台无关</b>——货拉拉、运满满、满帮、滴滴货运、快狗、省省回头车、甚至货主发的短信/微信群文字都能认；平台名只用来给单子打个「来源」标签。<br />
+        <b>4.</b> 算账口径跟原来那张表一样：油钱按总行驶（可含返程）+ 过路 + 固定成本。<br />
+        <b>5.</b> 「复制报价」会给你一段话，直接发给货主谈价。接单还是在 App 里点，这里不代下单。<br />
+        <b>6.</b> 数据全在手机浏览器里，换手机/清缓存前用「导出 CSV」备份。
+      </div>
+    </div>
+  </section>
+
+  <nav class="navb">
+    <button data-go="calc" class="on">
+      <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h3M8 16h3M15 12v4"/></svg>算账
+    </button>
+    <button data-go="pool">
+      <svg viewBox="0 0 24 24"><path d="M3 7h13v10H3zM16 10h4l1 3v4h-5z"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>单池
+    </button>
+    <button data-go="ledger">
+      <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>账本
+    </button>
+    <button data-go="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>设置
+    </button>
+  </nav>
+
+  <div id="toast"></div>
 </div>
-<div class="toast" id="toast"></div>
-
-<script>
-(function () {
-  "use strict";
-  var $ = function (id) { return document.getElementById(id); };
-  var KEY = "truckLedger.v1";
-  var DEFAULTS = { fuel: 30, price: 7.6, speed: 55, target: 45, fixed: 0, routes: [], compare: [], fuels: [], board: [], last: null,
-    amapKey: "92f7745dba3d8592d9a5d21691c38abd", amapSec: "74bc3446ff478240796f2aaa0b8862ba" };
-  var S = Object.assign({}, DEFAULTS);
-  var orders = [];
-
-  try {
-    var raw = localStorage.getItem(KEY);
-    if (raw) {
-      var d = JSON.parse(raw);
-      if (d && typeof d === "object") {
-        S = Object.assign({}, DEFAULTS, d.settings || {});
-        orders = Array.isArray(d.orders) ? d.orders : [];
-      }
-    }
-  } catch (e) {}
-  if (!Array.isArray(S.routes)) S.routes = [];
-  if (!Array.isArray(S.compare)) S.compare = [];
-  if (!Array.isArray(S.fuels)) S.fuels = [];
-
-  function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify({ settings: S, orders: orders })); } catch (e) {}
-  }
-
-  function num(v) {
-    var x = parseFloat(String(v == null ? "" : v).replace(",", "."));
-    return isFinite(x) && x > 0 ? x : 0;
-  }
-
-  function fmt(n, d) {
-    if (n == null || !isFinite(n)) return "—";
-    d = d == null ? 0 : d;
-    var s = Math.abs(n).toFixed(d).split(".");
-    s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return (n < 0 ? "-" : "") + s.join(".");
-  }
-
-  function calc() {
-    var freight = num($("freight").value), km = num($("km").value), dead = num($("dead").value),
-        wait = num($("wait").value), toll = num($("toll").value), other = num($("other").value);
-    var totalKm = km + dead;
-    var fuelCost = totalKm / 100 * S.fuel * S.price;
-    var cost = fuelCost + toll + other + S.fixed;
-    var net = freight - cost;
-    var hrs = totalKm / S.speed + wait;
-    return {
-      freight: freight, km: km, dead: dead, wait: wait, toll: toll, other: other,
-      totalKm: totalKm, fuel: fuelCost, cost: cost, net: net, hrs: hrs,
-      perKm: totalKm > 0 ? net / totalKm : null,
-      hourly: hrs > 0 ? net / hrs : null
-    };
-  }
-
-  function render() {
-    var c = calc();
-    var noKm = c.totalKm <= 0;
-    var v = "neutral", t = "填运费和里程";
-
-    if (!noKm && c.freight > 0) {
-      if (c.net <= 0) { v = "bad"; t = "这单倒贴，别跑"; }
-      else if (c.hourly != null && c.hourly >= S.target) { v = "ok"; t = "值得跑"; }
-      else if (c.hourly != null && c.hourly >= S.target * 0.7) { v = "warn"; t = "勉强，看顺不顺路"; }
-      else { v = "bad"; t = "不划算，时薪太低"; }
-    }
-
-    var vd = $("verdict");
-    vd.className = "verdict" + (v === "neutral" ? "" : " " + v);
-    vd.textContent = t;
-
-    $("net").textContent = noKm ? "0" : fmt(c.net, 0);
-    $("bigrow").className = "big" + (c.net < 0 ? " neg" : "");
-    $("perkm").textContent = c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2);
-    $("hourly").textContent = c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0);
-    $("hours").textContent = c.hrs > 0 ? fmt(c.hrs, 1) + "h" : "—";
-
-    var bits = [];
-    if (c.totalKm > 0) bits.push("油费 ¥" + fmt(c.fuel, 0) + "（" + fmt(c.totalKm, 0) + "公里）");
-    if (c.toll > 0) bits.push("过路 ¥" + fmt(c.toll, 0));
-    if (c.other > 0) bits.push("其他 ¥" + fmt(c.other, 0));
-    if (S.fixed > 0) bits.push("固定摊 ¥" + fmt(S.fixed, 0));
-
-    var line = bits.length ? "成本：" + bits.join(" · ") + " ＝¥" + fmt(c.cost, 0) : "";
-    if (c.wait >= 2) {
-      line += (line ? "<br>" : "") + "等了 " + fmt(c.wait, 1) + " 小时，超过 2 小时该跟货主要压车费";
-    }
-    $("brk").innerHTML = line;
-
-    var has = c.totalKm > 0;
-    $("qCost").textContent = has ? "¥" + fmt(c.cost, 0) : "—";
-    $("qBid").textContent = has
-      ? "¥" + fmt(Math.ceil((c.cost + S.target * c.hrs) / 10) * 10, 0)
-      : "—";
-  }
-
-  function dayKey(ts) {
-    var d = new Date(ts);
-    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
-  }
-  function monthKey(ts) {
-    var d = new Date(ts);
-    return d.getFullYear() + "-" + (d.getMonth() + 1);
-  }
-  function stamp(ts) {
-    var d = new Date(ts), p = function (x) { return x < 10 ? "0" + x : "" + x; };
-    return (d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-  }
-
-  function sumOf(list) {
-    var out = { n: list.length, net: 0, km: 0, hrs: 0 };
-    list.forEach(function (o) {
-      out.net += o.net || 0; out.km += o.totalKm || 0; out.hrs += o.hrs || 0;
-    });
-    return out;
-  }
-
-  function renderLedger() {
-    var now = Date.now();
-    var today = orders.filter(function (o) { return dayKey(o.ts) === dayKey(now); });
-    var month = orders.filter(function (o) { return monthKey(o.ts) === monthKey(now); });
-    var st = sumOf(today), sm = sumOf(month);
-
-    $("tToday").textContent = st.n ? st.n + " 单 · ¥" + fmt(st.net, 0) : "还没有";
-    $("tTodayRate").textContent = st.hrs > 0 ? "平均 ¥" + fmt(st.net / st.hrs, 0) + "/时" : "";
-    $("tMonth").textContent = sm.n ? sm.n + " 单 · ¥" + fmt(sm.net, 0) : "还没有";
-    $("tMonthRate").textContent = sm.hrs > 0
-      ? "平均 ¥" + fmt(sm.net / sm.hrs, 0) + "/时 · " + fmt(sm.km, 0) + "公里"
-      : "";
-
-    var box = $("rows");
-    if (!orders.length) {
-      box.innerHTML = '<div class="empty">还没有记录。算完一单点「记下这一单」。</div>';
-      return;
-    }
-    var sorted = orders.slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 60);
-    box.innerHTML = sorted.map(function (o) {
-      var neg = o.net < 0 ? " neg" : "";
-      var rate = o.hourly == null ? "—" : "¥" + fmt(o.hourly, 0) + "/时";
-      var line = "运费 " + fmt(o.freight, 0) + " · " + fmt(o.totalKm, 0) + "公里"
-        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "")
-        + " · " + (o.wait > 0 ? "等 " + fmt(o.wait, 1) + "h" : "不算等待");
-      return '<div class="row">'
-        + '<div class="m">'
-        + '<div class="l1"><span class="' + neg + '">¥' + fmt(o.net, 0) + "</span><em>"
-        + stamp(o.ts) + " · " + rate + "</em></div>"
-        + '<div class="l2">' + line + "</div>"
-        + "</div>"
-        + '<button class="del" data-id="' + o.id + '" aria-label="删除">×</button>'
-        + "</div>";
-    }).join("");
-  }
-
-  function toast(msg) {
-    var el = $("toast");
-    el.textContent = msg;
-    el.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function () { el.classList.remove("show"); }, 1500);
-  }
-
-  function saveOrder() {
-    var c = calc();
-    if (c.freight <= 0 || c.totalKm <= 0) { toast("先填运费和里程"); return; }
-    orders.push({
-      id: String(Date.now()) + Math.random().toString(36).slice(2, 6),
-      ts: Date.now(),
-      freight: c.freight, km: c.km, dead: c.dead, wait: c.wait,
-      toll: c.toll, other: c.other, totalKm: c.totalKm,
-      fuel: c.fuel, cost: c.cost, net: c.net, hrs: c.hrs,
-      perKm: c.perKm, hourly: c.hourly
-    });
-    persist();
-    renderLedger();
-    toast("已记下：" + (c.net >= 0 ? "净赚 ¥" + fmt(c.net, 0) : "净亏 ¥" + fmt(-c.net, 0)));
-  }
-
-  function exportCsv() {
-    if (!orders.length) { toast("账本还是空的"); return; }
-    var head = ["时间", "运费", "载货里程", "空驶里程", "装卸小时", "过路费", "其他", "油费", "净赚", "每公里", "时薪"];
-    var rows = orders.slice().sort(function (a, b) { return a.ts - b.ts; }).map(function (o) {
-      var d = new Date(o.ts);
-      return [d.toLocaleString("zh-CN"), o.freight, o.km, o.dead, o.wait, o.toll, o.other,
-        Math.round(o.fuel), Math.round(o.net),
-        o.perKm == null ? "" : o.perKm.toFixed(2),
-        o.hourly == null ? "" : o.hourly.toFixed(0)];
-    });
-    var csv = "\ufeff" + [head].concat(rows).map(function (r) { return r.join(","); }).join("\r\n");
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "接单账本.csv";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 0);
-    toast("已导出 CSV");
-  }
-
-  function esc(s) {
-    return String(s).replace(/[&<>"]/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch];
-    });
-  }
-
-  function renderRoutes() {
-    var box = $("routes");
-    if (!S.routes.length) { box.innerHTML = ""; return; }
-    box.innerHTML = S.routes.map(function (r, i) {
-      return '<span class="chip" data-i="' + i + '">' + esc(r.name) +
-        '<b data-del="' + i + '">×</b></span>';
-    }).join("");
-  }
-
-  function applyRoute(i) {
-    var r = S.routes[i];
-    if (!r) return;
-    ["km", "dead", "wait", "toll", "other"].forEach(function (id) {
-      var el = $(id);
-      el.value = r[id] ? r[id] : "";
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    toast("已填好 " + r.name + "，填运费就行");
-  }
-
-  $("routes").addEventListener("click", function (e) {
-    var del = e.target.getAttribute && e.target.getAttribute("data-del");
-    if (del !== null && del !== undefined) {
-      S.routes.splice(parseInt(del, 10), 1);
-      persist();
-      renderRoutes();
-      return;
-    }
-    var chip = e.target.closest && e.target.closest(".chip");
-    if (chip) applyRoute(parseInt(chip.getAttribute("data-i"), 10));
-  });
-
-  $("saveRoute").addEventListener("click", function () {
-    if (num($("km").value) <= 0) { toast("先填载货里程"); return; }
-    var raw = window.prompt("给这条线起个名，比如 西安→成都", "");
-    if (raw === null) return;
-    var name = String(raw).trim().slice(0, 12);
-    if (!name) return;
-    S.routes = S.routes.filter(function (r) { return r.name !== name; });
-    S.routes.unshift({
-      name: name, km: num($("km").value), dead: num($("dead").value),
-      wait: num($("wait").value), toll: num($("toll").value), other: num($("other").value)
-    });
-    S.routes = S.routes.slice(0, 8);
-    persist();
-    renderRoutes();
-    toast("已存线路：" + name);
-  });
-
-  /* ---------------- 多单比价 ---------------- */
-  var BUILD = "v2026-11-23";
-  var board = Array.isArray(S.board) ? S.board.slice() : [];
-  var BOARD_MAX = 20;
-
-  function bid() { return "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-
-  function ago(ts) {
-    var d = Math.max(0, Date.now() - (ts || 0)) / 60000;
-    if (d < 1) return "刚刚";
-    if (d < 60) return Math.round(d) + " 分钟前";
-    return Math.round(d / 60) + " 小时前";
-  }
-
-  function bcalc(o) {
-    var totalKm = (o.km || 0) + (o.dead || 0);
-    var fuelCost = totalKm / 100 * S.fuel * S.price;
-    var cost = fuelCost + (o.toll || 0) + (o.other || 0) + S.fixed;
-    var net = (o.freight || 0) - cost;
-    var hrs = S.speed > 0 ? totalKm / S.speed + (o.wait || 0) : 0;
-    return {
-      totalKm: totalKm, net: net, hrs: hrs,
-      perKm: totalKm > 0 ? net / totalKm : null,
-      hourly: hrs > 0 ? net / hrs : null
-    };
-  }
-
-  // 从一段平台复制出来的文字里认数字：一行一单
-  function parseOrder(line) {
-    var t = String(line || "").replace(/[，,；;、]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!t) return null;
-    var o = { id: bid(), ts: Date.now(), from: "", to: "", km: 0, dead: 0, freight: 0, wait: 0, toll: 0, other: 0 };
-    var m;
-    if ((m = t.match(/空驶\s*(\d+(?:\.\d+)?)/))) { o.dead = parseFloat(m[1]); t = t.replace(m[0], " "); }
-    if ((m = t.match(/过路费?\s*[¥￥]?\s*(\d+(?:\.\d+)?)/))) { o.toll = parseFloat(m[1]); t = t.replace(m[0], " "); }
-    if ((m = t.match(/(?:等(?:候|待)?|排队)\s*(\d+(?:\.\d+)?)\s*(?:小时|钟头|h)/i))) { o.wait = parseFloat(m[1]); t = t.replace(m[0], " "); }
-    if ((m = t.match(/(\d+(?:\.\d+)?)\s*(?:公里|千米|km)/i))) { o.km = parseFloat(m[1]); t = t.replace(m[0], " "); }
-    if ((m = t.match(/([¥￥]\s*\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:元|块钱|块)/))) {
-      o.freight = parseFloat(String(m[0]).replace(/[¥￥元块钱\s]/g, "")) || 0;
-      t = t.replace(m[0], " ");
-    }
-    var parts = t.split(/\s*(?:→|➡|⇒|—>|-{1,2}>|至|到|～|~|\|)\s*/)
-      .map(function (x) { return x.trim(); })
-      .filter(function (x) { return x && !/^\d+$/.test(x); });
-    if (parts.length >= 2) { o.from = parts[0].slice(0, 20); o.to = parts[1].slice(0, 20); }
-    else if (parts.length === 1) { o.from = parts[0].slice(0, 20); }
-    if (!o.km && !o.freight) return null;
-    return o;
-  }
-
-  function renderBoard() {
-    var sort = $("boardSort").value || "hourly";
-    var list = board.map(function (o) {
-      var c = bcalc(o);
-      return { o: o, c: c };
-    });
-    var cmp = {
-      hourly: function (a, b) { return (b.c.hourly == null ? -1e9 : b.c.hourly) - (a.c.hourly == null ? -1e9 : a.c.hourly); },
-      net: function (a, b) { return b.c.net - a.c.net; },
-      perKm: function (a, b) { return (b.c.perKm == null ? -1e9 : b.c.perKm) - (a.c.perKm == null ? -1e9 : a.c.perKm); },
-      short: function (a, b) { return a.c.totalKm - b.c.totalKm; }
-    }[sort] || null;
-    if (cmp) list.sort(cmp);
-
-    var bestIdx = -1, best = -Infinity;
-    list.forEach(function (r, i) {
-      if (r.c.hourly != null && r.c.hourly > best) { best = r.c.hourly; bestIdx = i; }
-    });
-
-    $("boardRows").innerHTML = list.length ? list.map(function (r, i) {
-      var o = r.o, c = r.c;
-      var stale = Date.now() - (o.ts || 0) > 10 * 60000;
-      var nm = (o.from ? o.from + " → " : "") + (o.to || "这单");
-      var low = c.hourly != null && c.hourly < S.target * 0.7;
-      return '<div class="cmp' + (stale ? " stale" : "") + '">'
-        + '<div class="m">'
-        + '<div class="l1"><b class="' + (c.net < 0 ? "neg" : "") + '">¥' + fmt(c.net, 0) + "</b>"
-        + "<em>净赚 · " + (c.hourly == null ? "—" : "¥" + fmt(c.hourly, 0) + "/时") + " · "
-        + (c.perKm == null ? "—" : "¥" + fmt(c.perKm, 2) + "/公里") + "</em></div>"
-        + '<div class="l2">' + esc(nm) + " · " + fmt(c.totalKm, 0) + "公里"
-        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "")
-        + (o.wait > 0 ? " · 等 " + fmt(o.wait, 1) + "h" : "") + " · 运费 " + fmt(o.freight, 0) + "</div>"
-        + '<div class="l2">' + (stale ? '<span class="oldmark">' + ago(o.ts) + "，这单多半没了</span>" : ago(o.ts))
-        + (low ? " · 时薪太低" : "") + "</div>"
-        + "</div>"
-        + (i === bestIdx && list.length > 1 ? '<span class="best">最赚</span>' : "")
-        + '<button class="take" data-take="' + esc(o.id) + '">算这单</button>'
-        + '<button class="del" data-bi="' + esc(o.id) + '">×</button>'
-        + "</div>";
-    }).join("") : '<div class="empty">还没单子。把平台上的单贴上面，或者点「加当前这单」。</div>';
-
-    $("boardCount").textContent = list.length
-      ? "共 " + list.length + " 单" + (list[0].c.hourly != null ? "，第一名单时薪 ¥" + fmt(list[0].c.hourly, 0) : "")
-      : "";
-  }
-
-  function addPaste() {
-    var raw = $("pasteBox").value || "";
-    var lines = raw.split(/\r?\n/).filter(function (x) { return x.trim(); });
-    if (!lines.length) { toast("先把单子贴进框里"); return; }
-    var ok = [], bad = 0;
-    lines.forEach(function (ln) {
-      var o = parseOrder(ln);
-      if (o) ok.push(o); else bad++;
-    });
-    if (!ok.length) { toast("一行都没认出数字，写成「杭州→广州 1141公里 5200元」这样"); return; }
-    ok.reverse().forEach(function (o) { board.unshift(o); });
-    if (board.length > BOARD_MAX) board = board.slice(0, BOARD_MAX);
-    S.board = board;
-    persist();
-    $("pasteBox").value = "";
-    renderBoard();
-    toast("加了 " + ok.length + " 单" + (bad ? "，" + bad + " 行没认出数字" : ""));
-  }
-
-  function addManual() {
-    var c = calc();
-    if (c.freight <= 0) { toast("先把上面的运费填上"); return; }
-    var pick = $("locPick") ? $("locPick").value.trim() : "";
-    var dest = $("locDest") ? $("locDest").value.trim() : "";
-    board.unshift({
-      id: bid(), ts: Date.now(), from: pick, to: dest,
-      km: c.km, dead: c.dead, freight: c.freight, wait: c.wait, toll: c.toll, other: c.other
-    });
-    if (board.length > BOARD_MAX) board = board.slice(0, BOARD_MAX);
-    S.board = board;
-    persist();
-    renderBoard();
-    toast("加进比价了");
-  }
-
-  function takeBoard(id) {
-    var o = null;
-    board.forEach(function (x) { if (x.id === id) o = x; });
-    if (!o) return;
-    setVal("freight", o.freight || 0);
-    setVal("km", o.km || 0);
-    setVal("dead", o.dead || 0);
-    setVal("wait", o.wait || 0);
-    setVal("toll", o.toll || 0);
-    setVal("other", o.other || 0);
-    render();
-    rememberInputs();
-    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { window.scrollTo(0, 0); }
-    toast("填进上面的算账了，看一眼再点「记下这一单」");
-  }
-
-  // 每分钟刷一遍时间戳，超过十分钟的单子自动变灰，提醒别再等了
-  setInterval(function () { if (!$("boardCard") || $("boardCard").open) renderBoard(); }, 60000);
-
-  // 在货拉拉/运满满里长按复制单子文字，回来点这一下，直接算
-  function readClip() {
-    if (!navigator.clipboard || !navigator.clipboard.readText) {
-      toast("这个浏览器不让读剪贴板，长按输入框粘贴一下就行");
-      return;
-    }
-    navigator.clipboard.readText().then(function (txt) {
-      if (!txt || !txt.trim()) { toast("剪贴板里没有字，先去平台里复制单子"); return; }
-      $("pasteBox").value = txt.trim();
-      addPaste();
-    }).catch(function () {
-      toast("没读到剪贴板，长按输入框粘贴一下就行");
-    });
-  }
-
-  $("readClip").addEventListener("click", readClip);
-  $("addPaste").addEventListener("click", addPaste);
-  $("addManual").addEventListener("click", addManual);
-  $("boardSort").addEventListener("change", renderBoard);
-  $("boardClear").addEventListener("click", function () {
-    board = [];
-    S.board = board;
-    persist();
-    renderBoard();
-    toast("比价板已清空");
-  });
-  $("boardRows").addEventListener("click", function (e) {
-    var take = e.target.closest && e.target.closest("[data-take]");
-    if (take) { takeBoard(take.getAttribute("data-take")); return; }
-    var del = e.target.closest && e.target.closest("[data-bi]");
-    if (del) {
-      var id = del.getAttribute("data-bi");
-      board = board.filter(function (x) { return x.id !== id; });
-      S.board = board;
-      persist();
-      renderBoard();
-      toast("删了");
-    }
-  });
-
-  function renderCompare() {
-    var list = S.compare;
-    $("cmpCard").hidden = !list.length;
-    $("cmpCount").textContent = list.length ? list.length + " 单，看谁时薪高" : "";
-    if (!list.length) { $("cmpRows").innerHTML = ""; return; }
-    var bestIdx = -1, best = -Infinity;
-    list.forEach(function (o, i) {
-      if (o.hourly != null && o.hourly > best) { best = o.hourly; bestIdx = i; }
-    });
-    $("cmpRows").innerHTML = list.map(function (o, i) {
-      var isBest = list.length > 1 && i === bestIdx;
-      return '<div class="cmp"><div class="m">'
-        + '<div class="l1"><b class="' + (o.net < 0 ? "neg" : "") + '">¥' + fmt(o.net, 0) + "</b>"
-        + "<em>净赚 · " + (o.hourly == null ? "—" : "¥" + fmt(o.hourly, 0) + "/时") + " · "
-        + (o.perKm == null ? "—" : "¥" + fmt(o.perKm, 2) + "/公里") + "</em></div>"
-        + '<div class="l2">运费 ' + fmt(o.freight, 0) + " · " + fmt(o.totalKm, 0) + "公里"
-        + (o.dead > 0 ? "（空驶 " + fmt(o.dead, 0) + "）" : "") + " · 等 " + fmt(o.wait, 1) + "h</div>"
-        + "</div>"
-        + (isBest ? '<span class="best">最赚</span>' : "")
-        + '<button class="del" data-ci="' + i + '">×</button></div>';
-    }).join("");
-  }
-
-  function addCompare() {
-    var c = calc();
-    if (c.freight <= 0 || c.totalKm <= 0) { toast("先填运费和里程"); return; }
-    if (S.compare.length >= 3) { toast("最多对比 3 单，先删一个"); return; }
-    S.compare.push({
-      freight: c.freight, km: c.km, dead: c.dead, wait: c.wait, toll: c.toll, other: c.other,
-      totalKm: c.totalKm, net: c.net, perKm: c.perKm, hourly: c.hourly, hrs: c.hrs
-    });
-    persist();
-    renderCompare();
-    toast("已加入对比，" + S.compare.length + " 单");
-  }
-
-  function renderFuel() {
-    var f = S.fuels, out = $("fuelReal"), use = $("useFuel");
-    use.hidden = true;
-    if (f.length < 2) {
-      out.textContent = f.length
-        ? "已记 1 次（里程 " + fmt(f[0].odo, 0) + "），下次加油再记一次就能算。"
-        : "记两次加油就能算出真实百公里油耗。";
-      return;
-    }
-    var a = f[f.length - 2], b = f[f.length - 1];
-    var dist = b.odo - a.odo, lit = b.liters;
-    if (dist <= 0 || lit <= 0) { out.textContent = "里程比上次小，检查一下读数。"; return; }
-    var real = lit / dist * 100;
-    if (!isFinite(real) || real < 3 || real > 90) {
-      out.textContent = "算出来 " + fmt(real, 1) + " 升/百公里，数字不对，检查里程和升数。";
-      return;
-    }
-    out.innerHTML = "上次加油跑了 " + fmt(dist, 0) + " 公里，这次加 " + fmt(lit, 0) +
-      " 升 ＝ <b>" + fmt(real, 1) + " 升/百公里</b>";
-    use.hidden = false;
-    use.setAttribute("data-v", real.toFixed(1));
-  }
-
-  $("addCmp").addEventListener("click", addCompare);
-  $("cmpClear").addEventListener("click", function () {
-    S.compare = [];
-    persist();
-    renderCompare();
-    toast("对比已清空");
-  });
-  $("cmpRows").addEventListener("click", function (e) {
-    var btn = e.target.closest && e.target.closest(".del");
-    if (!btn) return;
-    S.compare.splice(parseInt(btn.getAttribute("data-ci"), 10), 1);
-    persist();
-    renderCompare();
-  });
-
-  $("addFuel").addEventListener("click", function () {
-    var odo = num($("odo").value), lit = num($("liters").value);
-    if (odo <= 0 || lit <= 0) { toast("填里程表读数和加油升数"); return; }
-    var last = S.fuels[S.fuels.length - 1];
-    if (last && last.odo === odo) {
-      S.fuels[S.fuels.length - 1] = { ts: Date.now(), odo: odo, liters: lit };
-    } else {
-      S.fuels.push({ ts: Date.now(), odo: odo, liters: lit });
-    }
-    S.fuels = S.fuels.slice(-12);
-    $("odo").value = "";
-    $("liters").value = "";
-    persist();
-    renderFuel();
-    toast("已记一次加油");
-  });
-
-  $("useFuel").addEventListener("click", function () {
-    var v = parseFloat(this.getAttribute("data-v"));
-    if (!isFinite(v)) return;
-    S.fuel = v;
-    persist();
-    $("setFuel").value = v;
-    render();
-    toast("油耗改成 " + v + " 升/百公里");
-  });
-
-  // ===== 地图（可选，要用高德 Key）=====
-  var MAP = { map: null, geo: null, driving: null, drivingBroken: false, ac: [], pts: {}, txt: {}, loaded: false };
-
-  function setVal(id, v) {
-    var el = $(id);
-    el.value = v;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
-
-  function showSetup(on) {
-    $("mapSetup").hidden = !on;
-    $("mapMain").hidden = on;
-  }
-
-  function loadMap() {
-    if (!S.amapKey) { showSetup(true); return; }
-    if (window.AMap) { initMap(); return; }
-    showSetup(false);
-    $("mapInfo").textContent = "正在加载地图…";
-    window._AMapSecurityConfig = { securityJsCode: S.amapSec || "" };
-    var s = document.createElement("script");
-    s.src = "https://webapi.amap.com/maps?v=2.0&key=" + encodeURIComponent(S.amapKey) +
-      "&plugin=AMap.Driving,AMap.Geolocation,AMap.AutoComplete,AMap.Geocoder";
-    s.onload = function () { MAP.loaded = true; initMap(); };
-    s.onerror = function () {
-      $("mapInfo").textContent = "地图没加载出来：检查网络，或者 Key 是不是填错了。";
-      showSetup(true);
-    };
-    document.head.appendChild(s);
-  }
-
-  function initMap() {
-    if (MAP.map || !window.AMap) return;
-    showSetup(false);
-    try {
-      MAP.map = new window.AMap.Map("mapBox", { zoom: 10, viewMode: "2D" });
-      MAP.geo = new window.AMap.Geolocation({ enableHighAccuracy: true, timeout: 9000 });
-      MAP.map.addControl(MAP.geo);
-      MAP.driving = new window.AMap.Driving({ map: MAP.map, policy: window.AMap.DrivingPolicy.LEAST_TIME });
-      [["locNow", "now"], ["locPick", "pick"], ["locDest", "dest"]].forEach(function (p) {
-        var ac = new window.AMap.AutoComplete({ input: p[0] });
-        ac.on("select", function (e) {
-          var loc = e && e.poi && e.poi.location;
-          if (loc) { MAP.pts[p[1]] = loc; MAP.txt[p[1]] = $(p[0]).value; }
-        });
-        MAP.ac.push(ac);
-      });
-      $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
-      if (MAP.map) MAP.map.resize();
-      // 打开就顺手尝试一次定位，填好「现在的位置」；拿不到就安静地不管
-      if (!$("locNow").value && window.isSecureContext) setTimeout(function () { locate(true); }, 600);
-    } catch (e) {
-      $("mapInfo").textContent = "地图初始化失败：" + (e && e.message ? e.message : e);
-    }
-  }
-
-  function ensurePoint(key, id, cb) {
-    var el = $(id), text = (el.value || "").trim();
-    if (MAP.pts[key] && MAP.txt[key] === text) { cb(); return; }
-    if (!text) { toast("三个地点都填一下"); return; }
-    new window.AMap.Geocoder().getLocation(text, function (status, result) {
-      var g = result && result.geocodes;
-      if (status === "complete" && g && g.length && g[0].location) {
-        MAP.pts[key] = g[0].location;
-        MAP.txt[key] = text;
-        cb();
-      } else {
-        toast("没找到「" + text.slice(0, 8) + "」，在输入提示里点一条试试");
-      }
-    });
-  }
-
-  function dur(sec) {
-    var m = Math.round((sec || 0) / 60);
-    if (m < 60) return m + " 分钟";
-    return Math.floor(m / 60) + " 小时" + (m % 60 ? " " + (m % 60) + " 分" : "");
-  }
-
-  function applyRoute(a, b) {
-    var deadKm = Math.round(a.distance / 1000);
-    var km = Math.round(b.distance / 1000);
-    var toll = Math.round((a.tolls || 0) + (b.tolls || 0));
-    setVal("dead", deadKm);
-    setVal("km", km);
-    setVal("toll", toll);
-    render();
-    $("mapInfo").innerHTML = "空驶 <b>" + deadKm + " 公里</b>（约 " + dur(a.time) +
-      "）· 载货 <b>" + km + " 公里</b>（约 " + dur(b.time) +
-      "）· 过路费 <b>¥" + toll + "</b>，已经填进上面。<br />" +
-      "注意：高德是按小客车算的，跑起来比它慢，过路费货车按轴收也更高——" +
-      "平均时速还是按你自己的 " + S.speed + "，过路费要往上加点就自己改。";
-    toast("公里数和过路费填好了");
-    try { $("freight").focus(); } catch (e) {}
-  }
-
-  // 把坐标统一成 [经度, 纬度] 数组。
-  // 定位插件给的点、地理编码给的点、输入提示给的点，是不同来源的对象；
-  // 直接丢给路径规划有可能被判成参数不合法，回调就只剩一句 "error"，什么原因都不给。
-  function num(v) { v = parseFloat(v); return isNaN(v) ? null : v; }
-  function ptArr(p) {
-    if (!p) return null;
-    var lng = num(p.lng !== undefined ? p.lng : (typeof p.getLng === "function" ? p.getLng() : NaN));
-    var lat = num(p.lat !== undefined ? p.lat : (typeof p.getLat === "function" ? p.getLat() : NaN));
-    if (lng === null || lat === null) return null;
-    if (lng < 70 || lng > 140 || lat < 3 || lat > 55) return null;
-    return [lng, lat];
-  }
-
-  // 算一段路线；失败自动再来一次（换个干净的实例），还不行就把高德给的原因说出来
-  function driveOnce(a, b, cb) {
-    var tries = 0;
-    (function attempt() {
-      var d;
-      try {
-        // 第一次用挂在图上的实例（能画出线）；它要是出问题，就换一个干净的、不画线的实例再算
-        d = (tries === 0 && MAP.driving && !MAP.drivingBroken)
-          ? MAP.driving
-          : new window.AMap.Driving({ policy: window.AMap.DrivingPolicy.LEAST_TIME });
-      } catch (e) {
-        d = null;
-      }
-      if (!d) { cb("地图实例没准备好"); return; }
-      try {
-        d.search(a, b, function (st, res) {
-          var r = st === "complete" && res && res.routes && res.routes[0];
-          if (r) { cb(null, r); return; }
-          var why = (res && (res.info || res.infocode)) || st || "未知原因";
-          if (tries++ < 2) {
-            if (!(res && (res.info || res.infocode))) MAP.drivingBroken = true; // 画线的那个实例不靠谱，后面别再用了
-            setTimeout(attempt, 700);
-            return;
-          }
-          cb(String(why));
-        });
-      } catch (e) {
-        if (tries++ < 2) { MAP.drivingBroken = true; setTimeout(attempt, 700); return; }
-        cb("页面报错：" + (e && e.message ? e.message : e));
-      }
-    })();
-  }
-
-  function runRoute() {
-    var p = MAP.pts;
-    $("mapInfo").textContent = "在算路线，稍等…";
-    try { if (MAP.map) MAP.map.resize(); } catch (e) {}
-    try { if (MAP.driving) MAP.driving.clear(); } catch (e) {}
-
-    var A = ptArr(p.now), B = ptArr(p.pick), C = ptArr(p.dest);
-    if (!B || !C) {
-      $("mapInfo").textContent = "取货地或目的地还没定准，在输入框下面点一条提示更保险。";
-      return;
-    }
-
-    function failNow(msg) {
-      $("mapInfo").innerHTML = "现在到取货地这段没算出来。" +
-        "<br />高德说的原因：<b>" + esc(msg) + "</b>" +
-        "<br />多半是「现在的位置」那个定位点它不认，或者网慢。" +
-        "先手动把「现在的位置」改成一个地名（比如「大连甘井子区」），再点一次就行。";
-    }
-
-    function leg2(dead) {
-      driveOnce(B, C, function (e2, r2) {
-        if (!r2) {
-          $("mapInfo").innerHTML = "取货地到目的地这段没算出来。" +
-            "<br />高德说的原因：<b>" + esc(e2) + "</b>" +
-            "<br />地点越具体越好（「广州白云机场国内货站」比「白云」好找），等一下再点一次。";
-          return;
-        }
-        applyRoute(dead, r2);
-      });
-    }
-
-    driveOnce(A, B, function (e1, r1) {
-      if (r1) { leg2(r1); return; }
-      // 换个算法重试：把「现在的位置」当文字重新解析一遍，不用定位插件那个点
-      var txt = ($("locNow").value || "").trim();
-      if (!txt || /^当前位置/.test(txt)) { failNow(e1); return; }
-      new window.AMap.Geocoder().getLocation(txt, function (st, res) {
-        var g = st === "complete" && res && res.geocodes && res.geocodes[0];
-        var A2 = g && ptArr(g.location);
-        if (!A2) { failNow(e1); return; }
-        MAP.pts.now = g.location;
-        MAP.txt.now = txt;
-        driveOnce(A2, B, function (e1b, r1b) {
-          if (r1b) { leg2(r1b); return; }
-          failNow(e1b || e1);
-        });
-      });
-    });
-  }
-
-  $("btnKey").addEventListener("click", function () {
-    var k = ($("amapKey").value || "").trim();
-    if (!k) { toast("先把 Key 填上"); return; }
-    S.amapKey = k;
-    S.amapSec = ($("amapSec").value || "").trim();
-    persist();
-    loadMap();
-  });
-
-  $("btnKeyReset").addEventListener("click", function () {
-    showSetup(true);
-    $("amapKey").value = S.amapKey || "";
-    $("amapSec").value = S.amapSec || "";
-  });
-
-  $("btnGeo").addEventListener("click", function () { locate(false); });
-
-  function locate(silent) {
-    if (!MAP.geo) { if (!silent) toast("地图还没加载好"); return; }
-    $("mapInfo").textContent = "在定位…";
-    MAP.geo.getCurrentPosition(function (status, res) {
-      var pos = res && res.position;
-      if (status === "complete" && pos) {
-        MAP.pts.now = pos;
-        var shown = "当前位置 " + pos.lng.toFixed(4) + ", " + pos.lat.toFixed(4);
-        $("locNow").value = shown;
-        MAP.txt.now = shown;
-        $("mapInfo").textContent = "定位成功，接着填取货地和目的地。";
-        new window.AMap.Geocoder().getAddress(pos, function (st, r) {
-          var a = st === "complete" && r && r.regeocode && r.regeocode.formattedAddress;
-          if (a) {
-            $("locNow").value = a;
-            MAP.txt.now = a;
-          }
-        });
-      } else if (!silent) {
-        $("mapInfo").textContent = window.isSecureContext
-          ? "定位失败：手机设置里给这个浏览器开「位置」权限，再点一次；还是不行就手动填个大概名字（比如「萧山区」）。"
-          : "定位失败：这个页面不是 https 打开的，浏览器不给位置。用我发的那个 https 网址打开就能定位，或者手动填地点。";
-      } else {
-        $("mapInfo").textContent = "地图好了。点「定位」拿现在的位置，另外两个地点打字选提示里的那条。";
-      }
-    });
-  }
-
-  $("btnRoute").addEventListener("click", function () {
-    if (!MAP.map) { toast("先把 Key 保存，让地图加载出来"); return; }
-    ensurePoint("now", "locNow", function () {
-      ensurePoint("pick", "locPick", function () {
-        ensurePoint("dest", "locDest", function () { runRoute(); });
-      });
-    });
-  });
-
-  var mapCard = $("mapCard");
-  mapCard.addEventListener("toggle", function () {
-    S.mapOpen = mapCard.open;
-    persist();
-    if (!mapCard.open) return;
-    if (!MAP.map && S.amapKey) { loadMap(); return; }
-    if (MAP.map) setTimeout(function () { MAP.map.resize(); }, 80);
-  });
-
-  $("amapKey").value = S.amapKey || "";
-  $("amapSec").value = S.amapSec || "";
-  showSetup(!S.amapKey);
-  // 地图脚本等真的展开这张卡再去加载，不展开就不联网
-  // 第一次打开就把地图卡展开（上次手动收起来了才保持收起）
-  if (S.amapKey && S.mapOpen !== false) mapCard.open = true;
-  if (S.amapKey && mapCard.open) loadMap();
-
-  // 设置区绑定
-  var map = { setFuel: "fuel", setPrice: "price", setSpeed: "speed", setTarget: "target", setFixed: "fixed" };
-  Object.keys(map).forEach(function (id) {
-    var el = $(id);
-    el.value = S[map[id]];
-    el.addEventListener("change", function () {
-      var v = parseFloat(el.value);
-      S[map[id]] = isFinite(v) && v >= 0 ? v : DEFAULTS[map[id]];
-      if (map[id] === "speed" && S.speed <= 0) S.speed = DEFAULTS.speed;
-      el.value = S[map[id]];
-      persist();
-      render();
-    });
-  });
-
-  ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
-    $(id).addEventListener("input", function () { render(); rememberInputs(); });
-  });
-  function rememberInputs() {
-    S.last = {
-      freight: $("freight").value, km: $("km").value, dead: $("dead").value,
-      wait: $("wait").value, toll: $("toll").value, other: $("other").value
-    };
-    persist();
-  }
-  if (S.last && typeof S.last === "object") {
-    ["freight", "km", "dead", "wait", "toll", "other"].forEach(function (id) {
-      if (S.last[id] != null && S.last[id] !== "") $(id).value = S.last[id];
-    });
-  }
-
-  $("save").addEventListener("click", saveOrder);
-  $("export").addEventListener("click", exportCsv);
-
-  $("rows").addEventListener("click", function (e) {
-    var btn = e.target.closest(".del");
-    if (!btn) return;
-    var id = btn.getAttribute("data-id");
-    orders = orders.filter(function (o) { return o.id !== id; });
-    persist();
-    renderLedger();
-    toast("已删除");
-  });
-
-  renderBoard();
-  renderRoutes();
-  renderCompare();
-  renderFuel();
-  render();
-  renderLedger();
-})();
-</script>
+<script src="assets/parse.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
