@@ -46,6 +46,40 @@
   }
   function money(s) { return parseFloat(String(s).replace(/,/g, "")) || 0; }
 
+  /* ---- 语音/口语里的中文数字 → 阿拉伯数字（"四百一吨"→"400元/吨"、"三十三吨"→"33吨"） ---- */
+  var CN_D = { "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  var CN_U = { "十": 10, "百": 100, "千": 1000 };
+  var CN_CHARS = "零一二三四五六七八九十百千万两";
+  function cn2num(s) {
+    var total = 0, section = 0, num = 0, has = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i];
+      if (CN_D[c] !== undefined) { num = CN_D[c]; has = true; }
+      else if (CN_U[c] !== undefined) { if (num === 0 && c === "十") num = 1; section += num * CN_U[c]; num = 0; has = true; }
+      else if (c === "万") { section += num; total += (section || 1) * 10000; section = 0; num = 0; has = true; }
+    }
+    if (!has) return NaN;
+    return total + section + num;
+  }
+  function normalizeSpoken(t) {
+    var s = String(t || "");
+    // 口语 "X万X / X千X / X百X" 末尾省单位：一万三=13000、三百五=350
+    s = s.replace(new RegExp("([一二三四五六七八九两])([万千百])([一二三四五六七八九两])(?![\\u4e00-\\u9fa5])", "g"),
+      function (_, a, u, b) { return a + u + b + ({ "万": "千", "千": "百", "百": "十" }[u]); });
+    // "四百一吨 / 500一吨" = 元/吨
+    s = s.replace(new RegExp("([0-9]+(?:\\.[0-9]+)?|[" + CN_CHARS + "]+)\\s*一\\s*吨", "g"),
+      function (_, n) { return (/^[0-9.]+$/.test(n) ? n : cn2num(n)) + "元/吨"; });
+    // 中文数字 + 单位 → 阿拉伯数字
+    s = s.replace(new RegExp("([" + CN_CHARS + "]+)\\s*(元|块钱|块|吨|公里|千米|km|小时|分钟|米|方)", "g"),
+      function (_, n, u) { var v = cn2num(n); return (isFinite(v) ? v : n) + u; });
+    // 光念钱不说单位："一万二千五百" → "12500元"（≥100 且带 万/千/百 才认，避免误伤地名）
+    s = s.replace(new RegExp("([" + CN_CHARS + "]{2,})(?=\\s|$)", "g"), function (m) {
+      if (/[万千百]/.test(m)) { var v = cn2num(m); if (isFinite(v) && v >= 100) return v + "元"; }
+      return m;
+    });
+    return s;
+  }
+
   /** 从一段文字里抠最像地名的一串 */
   function pickPlace(str) {
     if (!str) return "";
@@ -176,7 +210,7 @@
     wait2: /(?:装卸|装货等待|装卸时间|装卸时长)\s*[：:约]*\s*([\d.]+)\s*(?:个)?\s*(?:小时|钟头|h|H)/,
     price: /(?:运费|报价|价格|总额|总价|运费总额|费用|到手价|司机所得)\s*[：:约]?\s*[¥￥]?\s*([\d,]+(?:\.\d+)?)\s*(?:元|块)?/,
     price2: /[¥￥]\s*([\d,]+(?:\.\d+)?)/,
-    price3: /([\d,]{2,}(?:\.\d+)?)\s*(?:元|块钱)/,
+    price3: /([\d,]{2,}(?:\.\d+)?)\s*(?:元|块钱|块)/,
     km: /(?:全程|总里程|里程|距离|公里数|路程|行驶)\s*[：:约]?\s*(?:约|大约|大概)?\s*([\d.]+)\s*(?:公里|千米|km|KM|Km)?/,
     km2: /([\d.]+)\s*(?:公里|千米|km|KM|Km)(?!\s*\/(?:小时|h))/,
     weightRange: /(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*(?:吨|t|T)/,
@@ -261,7 +295,7 @@
 
   /* ---------------- 主解析 ---------------- */
   function parseOrders(text) {
-    var raw = String(text || "");
+    var raw = normalizeSpoken(text);
     if (!raw.trim()) return [];
     raw = raw.replace(/\r/g, "\n");
     var lines = raw.split(/\n+/).map(clean).filter(Boolean);
@@ -356,7 +390,7 @@
       // 一行里有多单时取运费最高的那单
       return list.slice().sort(function (a, b) { return (b.freight || 0) - (a.freight || 0); })[0];
     }
-    var t = clean(text);
+    var t = clean(normalizeSpoken(text));
     if (!t) return null;
     var tag = tagLine(t);
     var r = splitRoute(tag.rest) || splitRoute(t);
@@ -432,6 +466,7 @@
     tagLine: tagLine,
     detectPlatform: detectPlatform,
     guessPlatform: guessPlatform,
+    normalizeSpoken: normalizeSpoken,
     PLATFORMS: PLATFORMS
   };
 })(typeof window !== "undefined" ? window : this);
