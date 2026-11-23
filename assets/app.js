@@ -620,15 +620,32 @@
     sink.addEventListener("input", function () {
       if (sink.value.trim().length > 6) handlePaste(sink.value);
     });
-    $("pasteBtn").onclick = function () {
-      // 优先直接读剪贴板（安卓 Chrome / 手机浏览器 / 桌面 Chrome 都支持读权限）
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        navigator.clipboard.readText().then(function (t) {
-          if (t && t.trim()) { sink.value = t; handlePaste(t); }
-          else { sink.value = ""; sink.focus(); toast("剪贴板是空的，手动长按粘贴"); }
-        }).catch(function () { sink.focus(); toast("点一下框，长按选「粘贴」"); });
-      } else { sink.focus(); toast("点一下框，长按选「粘贴」"); }
-    };
+    $("pasteBtn").onclick = function () { pasteFromClipboard(); };
+    // 点「粘贴一单」：先尽量直接读剪贴板；读不到就把框备好让你长按粘贴，绝不用你自己打字
+    function pasteFromClipboard() {
+      try { if (window.focus) window.focus(); } catch (e) {}
+      var askPerm = (navigator.permissions && navigator.permissions.query)
+        ? navigator.permissions.query({ name: "clipboard-read" }).catch(function () { return null; })
+        : Promise.resolve(null);
+      askPerm.then(function () {
+        if (!(navigator.clipboard && navigator.clipboard.readText)) throw new Error("no-api");
+        return navigator.clipboard.readText();
+      }).then(function (t) {
+        if (t && String(t).trim()) { sink.value = t; handlePaste(t); }
+        else { manualPaste("剪贴板是空的——先去那单上长按「复制」，再回来点这里"); }
+      }).catch(function () {
+        manualPaste("这个浏览器不让直接读剪贴板（微信/QQ 里打开常见），框已经选好了：长按框 →「粘贴」就行");
+      });
+    }
+    // 读不到时：把框显示出来、聚焦、选中；能长按粘贴的 WebView 再兜底试一下 execCommand
+    function manualPaste(msg) {
+      var box = sink.closest(".pastebox"); if (box) box.hidden = false;
+      sink.hidden = false;
+      try { sink.focus(); } catch (e) {}
+      try { sink.setSelectionRange(0, 0); } catch (e) {}
+      try { document.execCommand("paste"); } catch (e) {}
+      toast(msg || "框已经选好了：长按框 →「粘贴」");
+    }
     $("pasteClear").onclick = function () {
       sink.value = ""; $("pasteResult").hidden = true; $("pasteResult").innerHTML = "";
     };
