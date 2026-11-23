@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -40,6 +40,9 @@ h1 .ver{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;le
   color:#fff;background:linear-gradient(135deg,#0f766e,#115e59);display:flex;align-items:center;justify-content:center;
   gap:9px;box-shadow:0 8px 20px rgba(15,118,110,.28);letter-spacing:.2px}
 .pastebtn:active{transform:scale(.985)}
+.pastebtn.voice{margin-top:9px;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 20px rgba(217,119,6,.28);font-size:16px}
+.pastebtn.voice.listening{background:linear-gradient(135deg,#dc2626,#b91c1c);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 .pastebtn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .pastetip{text-align:center;font-size:11.5px;color:var(--muted);margin-top:6px}
 .pastebox{margin-top:8px}
@@ -169,7 +172,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div class="topbar">
     <div>
-      <h1>货运接单快算 <span class="ver">v10-截图识单-认找货助手</span></h1>
+      <h1>货运接单快算 <span class="ver">v11-语音说单</span></h1>
       <div class="sub">App 里复制一单 → 这里一贴 → 挣多少、该报多少，全出来</div>
     </div>
   </div>
@@ -181,7 +184,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
         <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h4"/></svg>
         粘贴一单
       </button>
-      <div class="pastetip">哪个 App 都行 —— 货拉拉、运满满、货车帮、满帮、滴滴货运、快狗、省省回头车、群里的货主消息……<br />能长按复制的：复制 → 点这里直接算；<b>像「找货助手」这种不让复制的：截个图 → 相册/微信「提取文字」→ 复制 → 贴进来</b></div></div>
+      <button class="pastebtn voice" id="voiceBtn" type="button">🎤 说一单（懒得打字就按这个，对着手机念）</button>
+      <div class="pastetip"><b>最省事：点🎤 念一句</b>，比如「文山广南到潍坊安丘，四百一吨，三十三吨，空驶五十二公里」，自动算账。<br />不能说的再：能复制的长按复制 → 点「粘贴一单」；<b>「找货助手」这种不让复制的：截图 → 相册/微信「提取文字」→ 复制 → 贴进来</b></div></div>
       <div class="pastebox">
         <textarea id="pasteSink" rows="2" placeholder="也可以直接把单子文字粘到这个框里（一次可以粘贴好多单）"></textarea>
         <div id="pasteResult" class="card" style="display:none;margin:8px 0 0;padding:8px 11px" hidden></div>
@@ -378,8 +382,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#94a3b8;backgr
 
   <div id="toast"></div>
 </div>
-<script src="assets/parse.js?v=10"></script>
-<script src="assets/map.js?v=10"></script>
-<script src="assets/app.js?v=10"></script>
+<script src="assets/parse.js?v=11"></script>
+<script src="assets/map.js?v=11"></script>
+<script src="assets/app.js?v=11"></script>
 </body>
 </html>
+
